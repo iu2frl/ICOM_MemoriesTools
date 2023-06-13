@@ -3,6 +3,8 @@ import ntpath
 
 # List of tuning steps in Hz
 tuningStepsAry: list[str] = ["5000", "6250", "10000", "12500", "15000", "20000", "25000", "30000", "50000"]
+# List of repeater tones
+rptTonesAry = ["67.0", "69.3", "71.9", "74.4", "77.0", "79.7", "82.5", "85.4", "88.5", "91.5", "94.8", "97.4", "100.0", "103.5", "107.2", "110.9", "114.8", "118.8", "123.0", "127.3", "131.8", "136.5", "141.3", "146.2", "151.4", "156.7", "159.8", "162.2", "165.5", "167.9", "171.3", "173.8", "177.9", "179.9", "183,5", "186.2", "189.9", "192.8", "196.6", "199.5", "203.5", "206.5", "210.7", "218.1", "225.7", "229.1", "233.6", "241.8", "250.3", "254.1"]
 
 # Get arguments from terminal
 def GetArgs() -> list[str, str]:
@@ -38,7 +40,7 @@ def GetShift(inputBank: list[str]) -> str:
     elif tmpSplit == "40":
         return "+"
     else:
-        return "ERR"
+        return "ERR-" + tmpSplit
 
 # Get mode from the current bank
 def GetMode(inputBank: list[str]) -> str:
@@ -70,7 +72,15 @@ def GetTone(inputBank: list[str]) -> str:
     elif tmpTone == "1C":
         return "DTCR-R"
     else:
-        return "Unknown"
+        return "Unknown-" + tmpTone
+
+# Get the Tone Squelch
+def GetTsql(inputBank: list[str]) -> str:
+    hex_string = inputBank[2][10:12]
+    hex_value = int(hex_string, 16)  # Convert hexadecimal string to integer
+    lower_byte = hex_value & 0xFF  # Extract the lower byte (last two characters)
+    number = lower_byte // 4  # Divide the lower byte by 4
+    return rptTonesAry[number]
 
 def main():
     inputFilePath, outputFilePath = GetArgs()
@@ -100,6 +110,16 @@ def main():
             chanMode = GetMode(memoryBank)
             # Extract tone mode
             chanTone = GetTone(memoryBank)
+            # Extract TX analog RPT tone
+            try:
+                rptTone = rptTonesAry[int(memoryBank[2][11:13], 16)]
+            except:
+                rptTone = "None"
+            # Extract RX analog RPT tone
+            try:
+                rptTsql = GetTsql(memoryBank)
+            except:
+                rptTsql = "None"
             # Print channel information
             print(" Channel name: [" + channelName + "]")
             print(" Frequency: [" + freqMhz + "] Hz")
@@ -108,6 +128,8 @@ def main():
             print(" Tuning step: [" + tuningStep + "]")
             print(" Mode: [" + chanMode + "]")
             print(" Tone mode: [" + chanTone + "]")
+            print(" Analog RPT tone: [" + rptTone + "]")
+            print(" Analog TSQL: [" + rptTsql + "]")
             
 if __name__ == "__main__":
    main()
