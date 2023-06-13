@@ -1,6 +1,9 @@
 import sys, getopt, os
 import ntpath
 
+# List of tuning steps in Hz
+tuningStepsAry: list[str] = ["5000", "6250", "10000", "12500", "15000", "20000", "25000", "30000", "50000"]
+
 def GetArgs() -> list[str, str]:
     opts, arg = getopt.getopt(sys.argv[1:],"hi:o:",["ifile=","ofile="])
     for opt, arg in opts:
@@ -54,11 +57,14 @@ def main():
                 split = "ERR"
             # Extract frequency offset
             freqOffset = str(int(memoryBank[0].rstrip()[14:22], 16))
+            # Extract tuning step
+            tuningStep = tuningStepsAry[int(memoryBank[2][13:14])]
             # Print channel information
             print(" Channel name: [" + channelName + "]")
             print(" Frequency: [" + freqMhz + "] Hz")
             print(" Split: [" + split + "]")
             print(" Offset: [" + freqOffset + "] Hz")
+            print(" Tuning step: [" + tuningStep + "]")
             
 if __name__ == "__main__":
    main()

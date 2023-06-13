@@ -1,6 +1,18 @@
 # IC-2820 ICF file
+ICF files are HEX streams that contains information for each memory bank, structure is something similar to:
+```
+1. Some number (not decoded yet, maybe radio ID or region?)
+2. Callsign
+3. First line of first memory channel
+4. Second line of first memory channel
+5. Third line of first memory channel
+6. First line of second memory channel
+...
+```
+So, excluding first two lines we can assume each memory is split into three lines, considering we have 500 memories, we know that memories starts from line 2 up to 1502 (500 memories * 3 lines)
+
 ## Frequency encoding and decoding
-By checking the input ICF i tried saving multiple memories with different content, example:
+By checking the input ICF i tried saving multiple memories with different content, example each 1st line:
 ```
 000010 08A9AC9C 000927C04351435143512020 -> 145.337500
 000010 089A6A5C 000927C04351435143512020 -> 144.337500
@@ -43,11 +55,11 @@ decoded_decimal = decode_hex_to_decimal(hex_value)
 print(decoded_decimal)
 ```
 ## Frequency offset and shift
-I got this data from the ICF file:
+I got this data from the ICF file at every 1st line:
 ```
-000010 08A9AC9C 000186A0 4351435143512020 -> 0.100000
-000010 08A9AC9C 00030D40 4351435143512020 -> 0.200000
-000010 08A9AC9C 00186A00 4351435143512020 -> 1.600000
+00001008A9AC9C 000186A0 4351435143512020 -> 0.100000
+00001008A9AC9C 00030D40 4351435143512020 -> 0.200000
+00001008A9AC9C 00186A00 4351435143512020 -> 1.600000
 ```
 
 So we can use this approach:
@@ -72,13 +84,24 @@ decoded_decimal = decode_hex_to_decimal(hex_value)
 print(f"Hexadecimal: {hex_value} -> Decimal: {decoded_decimal}")
 ```
 
-## Duplex
-To get the duplex mode (positive or negative shift) i got:
-
+## Duplex mode
+To get the duplex mode (positive or negative shift) i got from each 3rd line:
 ```
 00201072 00 208300090000415249204D4E2D56 -> No shift
 00201072 20 208300090000415249204D4E2D56 -> Negative
 00201072 40 208300090000415249204D4E2D56 -> Positive
 ```
 
-Then we can consider that byte to be the duplex mode
+## Tuning step
+For the tuning steps we have in each 3rd line:
+```
+002010720020 80 000000002020202020202020 -> 5k
+005010720020 81 000000002020202020202020 -> 6.25k
+008010720020 82 000000002020202020202020 -> 10k
+00B010720020 83 000000002020202020202020 -> 12.5k
+00E010720020 84 000000002020202020202020 -> 15k
+011010720020 85 000000002020202020202020 -> 20k
+014010720020 86 000000002020202020202020 -> 25k
+017010720020 87 000000002020202020202020 -> 30k
+01A010720020 88 000000002020202020202020 -> 50k
+```
