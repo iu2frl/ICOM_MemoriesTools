@@ -105,3 +105,12 @@ For the tuning steps we have in each 3rd line:
 017010720020 87 000000002020202020202020 -> 30k
 01A010720020 88 000000002020202020202020 -> 50k
 ```
+
+So we can extract the right step:
+```python
+# List of tuning steps in Hz
+tuningStepsAry: list[str] = ["5000", "6250", "10000", "12500", "15000", "20000", "25000", "30000", "50000"]
+# Extract tuning step
+tuningStep = tuningStepsAry[int(hex_value[2][13:14])]
+print(" Tuning step: [" + tuningStep + "]")
+```
