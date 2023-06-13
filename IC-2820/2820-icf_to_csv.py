@@ -26,7 +26,9 @@ def GetArgs() -> list[str, str]:
 def main():
     inputFilePath, outputFilePath = GetArgs()
     with open(inputFilePath, "r") as inputStream:
-        inputFileContent = inputStream.readlines()[0:(500*3)+2]
+        # Read lines up to memory number 500
+        #inputFileContent = inputStream.readlines()[0:(500*3)+2]
+        inputFileContent = inputStream.readlines()[0:32]
         print("Found memory file by [" + inputFileContent[1].rstrip().replace("#", "") + "]")
         # Loop per each memory bank and extract data
         for i in range(int((len(inputFileContent)-2)/3)):
@@ -40,9 +42,23 @@ def main():
             print("Found memory bank [" + str(i) + "]")
             # Extract bank name
             channelName = str(bytes.fromhex(memoryBank[2].rstrip()[22:])).replace("b\'","").replace("\'","")
+            # Extract split
+            tmpSplit = str(memoryBank[2].rstrip()[8:10])
+            if tmpSplit == "00":
+                split = "0"
+            elif tmpSplit == "20":
+                split = "-"
+            elif tmpSplit == "40":
+                split = "+"
+            else:
+                split = "ERR"
+            # Extract frequency offset
+            freqOffset = str(int(memoryBank[0].rstrip()[14:22], 16))
+            # Print channel information
             print(" Channel name: [" + channelName + "]")
-            print(" Frequency: [" + freqMhz + "]")
+            print(" Frequency: [" + freqMhz + "] Hz")
+            print(" Split: [" + split + "]")
+            print(" Offset: [" + freqOffset + "] Hz")
             
-
 if __name__ == "__main__":
    main()
