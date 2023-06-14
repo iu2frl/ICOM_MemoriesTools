@@ -30,31 +30,31 @@ def GetArgs() -> list[str, str]:
     return inputfile, outputfile
 
 # Get shift from the current bank
-def GetShift(inputBank: list[str]) -> str:
+def GetSplit(inputBank: list[str]) -> str:
     # Extract split
-    tmpSplit = str(inputBank[2].rstrip()[8:10])
-    if tmpSplit == "00":
+    tmpSplit = str(inputBank[2].rstrip()[8:9])
+    if tmpSplit == "0":
         return "0"
-    elif tmpSplit == "20":
+    elif tmpSplit == "2":
         return "-"
-    elif tmpSplit == "40":
+    elif tmpSplit == "4":
         return "+"
     else:
         return "ERR-" + tmpSplit
 
 # Get mode from the current bank
 def GetMode(inputBank: list[str]) -> str:
-    tmpMode = inputBank[2][16:18]
-    if tmpMode == "00":
+    tmpMode = inputBank[2][16:17]
+    if tmpMode == "0":
         return "FM"
-    elif tmpMode == "40":
+    elif tmpMode == "4":
         return "FM-N"
-    elif tmpMode == "80":
+    elif tmpMode == "8":
         return "AM"
-    elif tmpMode == "C0":
+    elif tmpMode == "C":
         return "AM-N" 
     else:
-        return "Unknown"
+        return "Unknown-" + tmpMode
 
 # Get tone from the current bank
 def GetTone(inputBank: list[str]) -> str:
@@ -101,7 +101,7 @@ def main():
             # Extract bank name
             channelName = str(bytes.fromhex(memoryBank[2].rstrip()[22:])).replace("b\'","").replace("\'","")
             # Extract split
-            split = GetShift(memoryBank)
+            split = GetSplit(memoryBank)
             # Extract frequency offset
             freqOffset = str(int(memoryBank[0].rstrip()[14:22], 16))
             # Extract tuning step
@@ -121,6 +121,7 @@ def main():
             except:
                 rptTsql = "None"
             # Print channel information
+            print(memoryBank)
             print(" Channel name: [" + channelName + "]")
             print(" Frequency: [" + freqMhz + "] Hz")
             print(" Split: [" + split + "]")
