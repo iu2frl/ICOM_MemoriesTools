@@ -11,6 +11,40 @@ ICF files are HEX streams that contains information for each memory bank, struct
 ```
 So, excluding first two lines we can assume each memory is split into three lines, considering we have 500 memories, we know that memories starts from line 2 up to 1502 (500 memories * 3 lines)
 
+### Memories
+So, we know the memories are composed of three lines
+#### First line
+```
+000 010 08A9AC9C 000927C0 435143514351 2020
+```
+- Bytes 0 to 2 are the lines counter for the file, starting from `000` and stopping at ACB
+- Bytes 3 to 5 are always fixed at `010`
+- Bytes 6 to 14 are the frequency encoding as described below
+- Bytes 14 to 22 are the frequency offset
+- Bytes 22 to 34 are the YOUR CALL for DV data
+- Bytes 34 to 38 are unknown
+
+#### Second line
+```
+001 010 20202020202020202020202020202020
+```
+- Bytes 0 to 2 are the lines counter for the file, starting from `000` and stopping at ACB
+- Bytes 3 to 5 are always fixed at `010`
+
+### Third line
+```
+002 010 72 0 02 08 3 00 0 90000 415249204D4E2D56
+```
+- Bytes 0 to 2 are the lines counter for the file, starting from `000` and stopping at ACB
+- Bytes 3 to 5 are always fixed at `010`
+- Byte 8 is the split mode index (None, Pos or Neg)
+- Bytes 10 and 11 are the tone squelch index
+- Byte 13 is the tuning step
+- Bytes 16 is the mode (FM, AM, etc)
+- Bytes from 22 to the end are the channel name (8 characters)
+
+# Decoding data
+
 ## Frequency encoding and decoding
 By checking the input ICF i tried saving multiple memories with different content, example each 1st line:
 ```
@@ -54,7 +88,7 @@ hex_value = "08A9AC9C"
 decoded_decimal = decode_hex_to_decimal(hex_value)
 print(decoded_decimal)
 ```
-## Frequency offset and shift
+## Frequency offset
 I got this data from the ICF file at every 1st line:
 ```
 00001008A9AC9C 000186A0 4351435143512020 -> 0.100000
@@ -145,27 +179,50 @@ Having this input per each 3rd line:
 00B01072 18 2080000000002020202020202020 -> DTCS
 00E01072 1C 2080000000002020202020202020 -> DTCS-R
 01401072 00 2080000000002020202020202020 -> None
-56301072 44 20A600000000525533312D56454E
+56301072 44 20A600000000525533312D56454E -> Tone
+
 ```
 
-## Analog tone
+## Repeater tones
 Having this input per each 3rd line:
 ```
-00201072042 00 0000000002020202020202020 -> 67.0
-00501072042 01 0000000002020202020202020 -> 69.3
-00801072042 02 0000000002020202020202020 -> 71.9
-00B01072042 02 0000000002020202020202020 -> 71.9
-00E01072042 31 0000000002020202020202020 -> 254.1
-01101072042 27 0000000002020202020202020 -> 199.5
+00201072 0 4 20 00 000000002020202020202020 -> 67.0 (0)
+00501072 0 4 20 10 000000002020202020202020 -> 69.3 (1)
+00801072 0 4 20 20 000000002020202020202020 -> 71.9 (2)
+00B01072 0 4 20 20 000000002020202020202020 -> 71.9 (2)
+01101072 0 4 22 70 000000002020202020202020 -> 199.5 (39)
+01701072 0 0 04 05 000000002020202020202020 -> Simplex + NoTone + Tone 67.0 + TSQL 69.3
+01A01072 2 4 00 05 000000002020202020202020 -> Dup- + TONE + Tone 67.0 + TSQL 67.0
+01D01072 4 4 04 05 000000002020202020202020 -> Dup+ + TONE + Tone 67.0 + TSQL 69.3
+02001072 4 4 03 15 000000002020202020202020 -> Dup+ + TONE + Tone 254.1 + TSQL 67.0
+02301072 4 C 03 15 000000002020202020202020 -> Dup+ + TSQL + Tone 254.1 + TSQL 67.0
+02601072 5 0 03 15 000000002020202020202020 -> Dup+ + TSQL-R + Tone 254.1 + TSQL 67.0
+02901072 5 8 03 15 000000002020202020202020 -> Dup+ + DTCS + Tone 254.1 + TSQL 67.0
+02C01072 5 C 03 15 000000002020202020202020 -> Dup+ + DTCS-R + Tone 254.1 + TSQL 67.0
+
+00201072 0 4 00 05 000000002020202020202020 -> TONE + Tone 67.0 + TSQL 67.0
+00501072 0 4 04 05 000000002020202020202020 -> TONE + Tone 67.0 + TSQL 69.3
+00801072 0 C 00 05 000000002020202020202020 -> TSQL + Tone 67.0 + TSQL 67.0
+00B01072 0 C 04 05 000000002020202020202020 -> TSQL + Tone 67.0 + TSQL 69.3
+00E01072 1 0 00 05 000000002020202020202020 -> TSQLR + Tone 67.0 + TSQL 67.0
+01101072 1 0 04 05 000000002020202020202020 -> TSQLR + Tone 67.0 + TSQL 69.3
+01401072 0 0 00 05 000000002020202020202020 -> None + Tone 67.0 + TSQL 67.0
+01701072 0 0 04 05 000000002020202020202020 -> None + Tone 67.0 + TSQL 69.3
+56301072 4 4 20 A6 00000000525533312D56454E -> TONE + Tone 94.8 + TSQL 88.5
+25D01072 2 4 20 26 000900005230412D4C4F4D20 -> TONE + Tone 71.9 + TSQL 88.5
+01A01072 2 4 00 05 000000002020202020202020 -> DUP- + Tone 67.0 + TSQL 67.0
+01D01072 4 4 04 05 000000002020202020202020 -> DUP+ + Tone 67.0 + TSQL 69.3
 ```
 
-## TSQL
-Having this input:
+## Channel name
+Channel name is encoded in the 3rd line of the channel:
 ```
-002010720C 00 00000000002020202020202020 -> 67.0
-005010720C 04 00000000002020202020202020 -> 69.3
-008010720C 08 00000000002020202020202020 -> 71.9
-00B010720C 0C 00000000002020202020202020 -> 74.4
-00E010720C 10 00000000002020202020202020 -> 77.0
-011010720C 14 00000000002020202020202020 -> 79.7
+563010724420A600000000 525533312D56454E -> RU31-VEN
+```
+
+## DV Data
+### YOUR CALL
+The destination callsign is easy to get and comes from the 1st line:
+```
+00001008A9AC9C000927C0 435143514351 2020 -> CQCQCQ
 ```

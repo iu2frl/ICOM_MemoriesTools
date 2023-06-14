@@ -7,16 +7,23 @@ tuningStepsAry: list[str] = ["5000", "6250", "10000", "12500", "15000", "20000",
 rptTonesAry = ["67.0", "69.3", "71.9", "74.4", "77.0", "79.7", "82.5", "85.4", "88.5", "91.5", "94.8", "97.4", "100.0", "103.5", "107.2", "110.9", "114.8", "118.8", "123.0", "127.3", "131.8", "136.5", "141.3", "146.2", "151.4", "156.7", "159.8", "162.2", "165.5", "167.9", "171.3", "173.8", "177.9", "179.9", "183,5", "186.2", "189.9", "192.8", "196.6", "199.5", "203.5", "206.5", "210.7", "218.1", "225.7", "229.1", "233.6", "241.8", "250.3", "254.1"]
 
 # Get arguments from terminal
-def GetArgs() -> list[str, str]:
-    opts, arg = getopt.getopt(sys.argv[1:],"hi:o:",["ifile=","ofile="])
+def GetArgs() -> list[str, str, int, int]:
+    firstCh = ""
+    lastCh = ""
+    opts, arg = getopt.getopt(sys.argv[1:],"hi:o:f:l:",["ifile=", "ofile=", "first=", "last="])
     for opt, arg in opts:
         if opt == '-h':
-            print (os.path.basename(__file__) + ' -i <inputfile> -o <outputfile>')
+            print(os.path.basename(__file__) + ' -i <inputfile> -o <outputfile>')
+            print("Optional: -f <firstCh> -l <lastCh>")
             sys.exit()
         elif opt in ("-i", "--ifile"):
             inputfile = arg
         elif opt in ("-o", "--ofile"):
             outputfile = arg
+        elif opt in ("-f", "--first"):
+            firstCh = arg
+        elif opt in ("-l", "--last"):
+            lastCh = arg
     if (inputfile.endswith(".icf")):
         print ('Input file is ', inputfile)
     else:
@@ -27,12 +34,20 @@ def GetArgs() -> list[str, str]:
     else:
         outputfile = ntpath.basename(inputfile.replace(".icf", ".csv"))
         print("No output file was given, defaulting to " + outputfile)
-    return inputfile, outputfile
+    if firstCh == "":
+        firstCh = 0
+    else:
+        firstCh = int(firstCh)
+    if lastCh == "":
+        lastCh = 500
+    else:
+        lastCh = int(lastCh)
+    return inputfile, outputfile, firstCh, lastCh
 
 # Get shift from the current bank
 def GetSplit(inputBank: list[str]) -> str:
     # Extract split
-    tmpSplit = str(inputBank[2].rstrip()[8:9])
+    tmpSplit = str(inputBank[2][8:9])
     if tmpSplit == "0":
         return "0"
     elif tmpSplit == "2":
@@ -83,27 +98,38 @@ def GetTsql(inputBank: list[str]) -> str:
     return rptTonesAry[number]
 
 def main():
-    inputFilePath, outputFilePath = GetArgs()
+    inputFilePath, outputFilePath, firstCh, lastCh = GetArgs()
     with open(inputFilePath, "r") as inputStream:
-        # Read lines up to memory number 500
-        inputFileContent = inputStream.readlines()[0:(500*3)+2]
+        # Read file content
+        inputFileContent = inputStream.readlines()
         print("Found memory file by [" + inputFileContent[1].rstrip().replace("#", "") + "]")
+        print("Reading channels from [" + str(firstCh) + "] to [" + str(lastCh) + "]")
+        firstRow = (firstCh * 3) + 2
+        lastRow = (lastCh * 3) + 2
+        print("Reading lines from [" + str(firstRow) + "] to [" + str(lastRow) + "]")
+        inputFileContent = inputFileContent[firstRow:lastRow]
+        print(len(inputFileContent))
         # Loop per each memory bank and extract data
-        for i in range(int((len(inputFileContent)-2)/3)):
-            memoryBank = inputFileContent[(i*3)+2:(i*3)+5]
+        for i in range(int(len(inputFileContent)/3)):
+            # Read real value from the file
+            tmpBank = inputFileContent[(i*3):(i*3)+3]
+            memoryBank: list[str] = []
+            # Clean the string
+            for singleLine in tmpBank:
+                memoryBank.append(singleLine.strip())
             # Extract frequency from the memory bank
-            freqMhz = str(int(memoryBank[0].rstrip()[6:14], 16))
+            freqMhz = str(int(memoryBank[0][6:14], 16))
             if (int(freqMhz) <= 5000):
                 #print("Memory bank [" + str(i) + "] is empty, skipping")
                 continue
             # Memory band is valid
             print("Found memory bank [" + str(i) + "]")
             # Extract bank name
-            channelName = str(bytes.fromhex(memoryBank[2].rstrip()[22:])).replace("b\'","").replace("\'","")
+            channelName = str(bytes.fromhex(memoryBank[2][22:])).replace("b\'","").replace("\'","")
             # Extract split
             split = GetSplit(memoryBank)
             # Extract frequency offset
-            freqOffset = str(int(memoryBank[0].rstrip()[14:22], 16))
+            freqOffset = str(int(memoryBank[0][14:22], 16))
             # Extract tuning step
             tuningStep = tuningStepsAry[int(memoryBank[2][13:14])]
             # Extract mode
@@ -116,10 +142,9 @@ def main():
             except:
                 rptTone = "None"
             # Extract RX analog RPT tone
-            try:
-                rptTsql = GetTsql(memoryBank)
-            except:
-                rptTsql = "None"
+            rptTsql = GetTsql(memoryBank)
+            # Extract YOUR callsign (for DV)
+            yourCall = str(bytes.fromhex(memoryBank[0][22:34])).replace("b\'","").replace("\'","")
             # Print channel information
             print(memoryBank)
             print(" Channel name: [" + channelName + "]")
@@ -131,6 +156,7 @@ def main():
             print(" Tone mode: [" + chanTone + "]")
             print(" Analog RPT tone: [" + rptTone + "]")
             print(" Analog TSQL: [" + rptTsql + "]")
+            print(" Your CALL: [" + yourCall + "]")
             
 if __name__ == "__main__":
    main()
