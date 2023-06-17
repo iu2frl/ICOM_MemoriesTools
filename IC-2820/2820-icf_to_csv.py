@@ -39,9 +39,11 @@ def GetArgs() -> list[str, str, int, int]:
     else:
         firstCh = int(firstCh)
     if lastCh == "":
-        lastCh = 500
+        lastCh = 499
     else:
         lastCh = int(lastCh)
+        if lastCh > 499:
+            lastCh = 499
     return inputfile, outputfile, firstCh, lastCh
 
 # Get shift from the current bank
