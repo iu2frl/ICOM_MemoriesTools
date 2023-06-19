@@ -1,40 +1,141 @@
-import tensorflow as tf
+import csv
 import numpy as np
-import pandas as pd
+import torch
+import torch.nn as nn
+import torch.optim as optim
+from torch.utils.data import Dataset, DataLoader
+from sklearn.preprocessing import LabelEncoder
 
-# Load the training data
-csv_data = pd.read_csv('csv_input.csv', delimiter=';', skiprows=1)
-hex_data = pd.read_csv('hex_input.txt', delimiter=';', header=None)
+# Define the neural network model
+class MyModel(nn.Module):
+    def __init__(self, input_size, output_size):
+        super(MyModel, self).__init__()
+        self.fc1 = nn.Linear(input_size, 64)
+        self.fc2 = nn.Linear(64, output_size)
 
-# Prepare the input and target data
-csv_input = csv_data.iloc[:, 1:].apply(pd.to_numeric, errors='coerce').values.astype(float)  # Exclude the first column (CH No)
-hex_target = hex_data.iloc[1:].values.astype(int)
-# Define the neural network architecture
-model = tf.keras.Sequential([
-    tf.keras.layers.Dense(64, activation='relu', input_shape=(17,)),
-    tf.keras.layers.Dense(32, activation='relu'),
-    tf.keras.layers.Dense(16, activation='relu'),
-    tf.keras.layers.Dense(16, activation='softmax')
-])
+    def forward(self, x):
+        x = torch.relu(self.fc1(x))
+        x = self.fc2(x)
+        return x
 
-# Compile the model
-model.compile(optimizer='adam', loss='sparse_categorical_crossentropy')
+# Define custom dataset
+class MyDataset(Dataset):
+    def __init__(self, data, labels):
+        self.data = data
+        self.labels = labels
+
+    def __len__(self):
+        return len(self.data)
+
+    def __getitem__(self, index):
+        x = self.data[index]
+        y = self.labels[index]
+        return x, y
+
+# Read data from CSV file and extract channel information
+channels = []
+hex_codes = []
+with open('csv_input.csv', 'r') as file:
+    reader = csv.reader(file, delimiter=';')
+    next(reader)  # Skip the header row
+    for row in reader:
+        if not row[1]:  # Skip the line if the 'Frequency' field is empty
+            continue
+
+        try:
+            frequency = int(float(row[1].replace(',', '.')) * 1e6)
+        except ValueError:
+            continue  # Skip the line if the 'Frequency' field is not numeric
+
+        channel = {
+            'number': int(row[0]),
+            'frequency': frequency,
+            'duplex': row[2],
+            'offset': float(row[3].replace(',', '.')),
+            'ts': row[4],
+            'mode': row[5],
+            'name': row[6],
+            'skip': row[7],
+            'tone': row[8],
+            'repeater_tone': row[9],
+            'tsql_frequency': row[10],
+            'dtcs_code': row[11],
+            'dtcs_polarity': row[12],
+            'dv_sql': row[13],
+            'dv_csql_code': row[14],
+            'your_call_sign': row[15],
+            'rpt1_call_sign': row[16],
+            'rpt2_call_sign': row[17]
+        }
+        channels.append(channel)
+
+# Read HEX strings from the "hex_input.txt" file
+with open('hex_input.txt', 'r') as file:
+    hex_strings = file.readlines()
+hex_strings = [hex_string.strip() for hex_string in hex_strings]
+
+# Convert the input features into numerical representation
+
+# Convert the hexadecimal codes into numerical values
+numeric_hex_codes = [int(hex_code, 16) for hex_code in hex_strings]
+
+# Convert input features to a list of lists
+data = []
+for channel in channels:
+    channel_data = []
+    for key in channel:
+        value = channel[key]
+        if isinstance(value, str):
+            channel_data.append(value)
+        else:
+            channel_data.append(float(value))
+    data.append(channel_data)
+
+# Convert the list of lists into a NumPy array
+data = np.array(data)
+input_size = data.shape[1]
+# Encode categorical variables
+label_encoder = LabelEncoder()
+for i in range(data.shape[1]):
+    if isinstance(data[0][i], str):
+        data[:, i] = label_encoder.fit_transform(data[:, i])
+
+# Convert the data to float32
+data = data.astype(np.float32)
+
+# Convert labels to a NumPy array
+labels = np.array(numeric_hex_codes, dtype=np.float32)
+
+# Create a custom dataset and data loader
+dataset = MyDataset(data, labels)
+batch_size = 16
+dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=True)
+
+# Define the neural network model
+input_size = data.shape[1]
+output_size = 1
+model = MyModel(input_size, output_size)
+
+# Define loss function and optimizer
+criterion = nn.MSELoss()
+optimizer = optim.SGD(model.parameters(), lr=0.01)
 
 # Train the model
-model.fit(csv_input, hex_target, epochs=100)
+num_epochs = 10
+for epoch in range(num_epochs):
+    for inputs, labels in dataloader:
+        # Forward pass
+        outputs = model(inputs)
+        loss = criterion(outputs, labels)
+
+        # Backward pass and optimization
+        optimizer.zero_grad()
+        loss.backward()
+        optimizer.step()
+
+    # Print the loss for each epoch
+    print(f"Epoch {epoch+1}/{num_epochs}, Loss: {loss.item()}")
 
 # Save the trained model
-model.save('csv_to_hex_translation_model')
-
-# Load the trained model
-model = tf.keras.models.load_model('csv_to_hex_translation_model')
-
-# Generate hex stream for new CSV input
-new_csv_data = pd.read_csv('new_input.csv', delimiter=';', skiprows=1)
-new_csv_input = new_csv_data.iloc[:, 1:].values
-predicted_hex = model.predict(new_csv_input)
-
-# Convert the predicted hex stream to a string
-predicted_hex_str = ''.join([format(np.argmax(row), 'x').zfill(2) for row in predicted_hex])
-
-print(predicted_hex_str)
+#print(model.state_dict())
+torch.save(model.state_dict(), 'model.pt')
