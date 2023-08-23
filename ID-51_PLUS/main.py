@@ -1,6 +1,5 @@
 import sys, getopt, os
 import ntpath
-import math
 import sys
 sys.path.append('..')  # Add the parent folder to the system path
 import functions
