@@ -119,7 +119,7 @@ def main():
             #print(str(int(singleMemory[2:10], 16)))
             print(f" Duplex: [{GetDuplex(singleMemory[21:22])}]")
             print(f" Mode: [{GetMode(singleMemory[13:14])}]")
-            print(f" Tone: [{GetToneMode(singleMemory[20:21])}] Hz")
+            print(f" Tone: [{GetToneMode(singleMemory[20:21])}]")
             print(f" Step: [{GetStep(singleMemory[16:17])}] KHz")
             print(f" Raw: [{singleMemory}]")
             bankCnt += 1
