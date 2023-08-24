@@ -52,7 +52,7 @@ def GetDuplex(inputData) -> str:
     elif inputStr == "4":
         return "DUP-"
     else:
-        return "UNKNOWN"
+        return f"UNKNOWN - {inputStr}"
     
 def GetMode(inputData) -> str:
     inputStr = str(inputData)
@@ -63,7 +63,7 @@ def GetMode(inputData) -> str:
     elif inputStr == "5":
         return "DV"
     else:
-        return "UNKNOWN"
+        return f"UNKNOWN - {inputStr}"
     
 def GetToneMode(inputData) -> str:
     inputStr = str(inputData)
@@ -76,7 +76,18 @@ def GetToneMode(inputData) -> str:
     elif inputStr == "5":
         return "DTCS"
     else:
-        return "Unknown"
+        return f"UNKNOWN - {inputStr}"
+
+def GetStep(inputData) -> str:
+    inputStr = str(inputData)
+    if inputStr == "1":
+        return "6,25"
+    elif inputStr == "2":
+        return "8,33"
+    elif inputStr == "8":
+        return "25"
+    else:
+        return f"UNKNOWN - {inputStr}"
 
 def main():
     inputFilePath, outputFilePath, firstCh, lastCh = GetArgs()
@@ -106,7 +117,8 @@ def main():
             #print(str(int(singleMemory[2:10], 16)))
             print(f" Duplex: [{GetDuplex(singleMemory[21:22])}]")
             print(f" Mode: [{GetMode(singleMemory[13:14])}]")
-            print(f" Tone: [{GetToneMode(singleMemory[20:21])}]")
+            print(f" Tone: [{GetToneMode(singleMemory[20:21])}] Hz")
+            print(f" Step: [{GetStep(singleMemory[16:17])}] KHz")
             print(f" Raw: [{singleMemory}]")
             bankCnt += 1
             
