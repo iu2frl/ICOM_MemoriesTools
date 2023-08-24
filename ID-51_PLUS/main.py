@@ -53,6 +53,28 @@ def GetDuplex(inputData) -> str:
         return "DUP-"
     else:
         return "UNKNOWN"
+    
+def GetMode(inputData) -> str:
+    inputStr = str(inputData)
+    if inputStr == "0":
+        return "FM"
+    elif inputStr == "3":
+        return "AM"
+    elif inputStr == "5":
+        return "DV"
+    else:
+        return "UNKNOWN"
+    
+def GetToneMode(inputData) -> str:
+    inputStr = str(inputData)
+    if inputStr == "0":
+        return "None"
+    elif inputStr == "1":
+        return "Tone"
+    elif inputStr == "3":
+        return "TSQL"
+    else:
+        return "Unknown"
 
 def main():
     inputFilePath, outputFilePath, firstCh, lastCh = GetArgs()
@@ -81,6 +103,8 @@ def main():
             #print(" Your call: [" + functions.HexToAscii(singleMemory, ))
             #print(str(int(singleMemory[2:10], 16)))
             print(f" Duplex: [{GetDuplex(singleMemory[21:22])}]")
+            print(f" Mode: [{GetMode(singleMemory[13:14])}]")
+            print(f" Tone: [{GetToneMode(singleMemory[20:21])}]")
             print(f" Raw: [{singleMemory}]")
             bankCnt += 1
             
