@@ -73,6 +73,8 @@ def GetToneMode(inputData) -> str:
         return "Tone"
     elif inputStr == "3":
         return "TSQL"
+    elif inputStr == "5":
+        return "DTCS"
     else:
         return "Unknown"
 
