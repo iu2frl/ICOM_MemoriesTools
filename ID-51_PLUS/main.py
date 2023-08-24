@@ -42,6 +42,18 @@ def GetArgs() -> list[str, str, int, int]:
         lastCh = int(lastCh)
     return inputfile, outputfile, firstCh, lastCh
 
+# Get duplex mode
+def GetDuplex(inputData) -> str:
+    inputStr = str(inputData)
+    if inputStr == "8":
+        return "DUP+"
+    elif inputStr == "0":
+        return "OFF"
+    elif inputStr == "4":
+        return "DUP-"
+    else:
+        return "UNKNOWN"
+
 def main():
     inputFilePath, outputFilePath, firstCh, lastCh = GetArgs()
     with open(inputFilePath, "r") as inputStream:
@@ -64,7 +76,10 @@ def main():
             memoriesList.append(singleString[i*memoryLength:(i*memoryLength)+memoryLength])
         for singleMemory in memoriesList[firstCh:lastCh]:
             #print("Found channel [" + "]")
-            #print(" Channel name: [" + functions.GetChannelName(singleMemory, 22, 54) + "]")
+            print(f" Name: [{functions.HexToAscii(singleMemory, 22, 54)}]")
+            #print(" Your call: [" + functions.HexToAscii(singleMemory, ))
+            #print(str(int(singleMemory[2:10], 16)))
+            print(f" Duplex: [{GetDuplex(singleMemory[21:22])}]")
             print(singleMemory)
             
 if __name__ == "__main__":
