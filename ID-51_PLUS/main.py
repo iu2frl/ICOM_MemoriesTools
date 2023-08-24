@@ -74,13 +74,15 @@ def main():
         memoriesList: list[str] = []
         for i in range(500):
             memoriesList.append(singleString[i*memoryLength:(i*memoryLength)+memoryLength])
+        bankCnt = 0
         for singleMemory in memoriesList[firstCh:lastCh]:
-            #print("Found channel [" + "]")
+            print(f"Channel: [{bankCnt}]")
             print(f" Name: [{functions.HexToAscii(singleMemory, 22, 54)}]")
             #print(" Your call: [" + functions.HexToAscii(singleMemory, ))
             #print(str(int(singleMemory[2:10], 16)))
             print(f" Duplex: [{GetDuplex(singleMemory[21:22])}]")
-            print(singleMemory)
+            print(f" Raw: [{singleMemory}]")
+            bankCnt += 1
             
 if __name__ == "__main__":
    main()
