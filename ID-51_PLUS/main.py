@@ -58,6 +58,8 @@ def GetMode(inputData) -> str:
     inputStr = str(inputData)
     if inputStr == "0":
         return "FM"
+    elif inputStr == "1":
+        return "FM-N"
     elif inputStr == "3":
         return "AM"
     elif inputStr == "5":
