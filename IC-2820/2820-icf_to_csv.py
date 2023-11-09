@@ -168,6 +168,7 @@ def main():
         # Print channel information
         print()
         single_bank.print_bank()
+    functions.write_chirp_csv(output_file_path, channels_list)
 
 if __name__ == "__main__":
     main()

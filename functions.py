@@ -12,7 +12,9 @@ analog_tones_list = ["67.0", "69.3", "71.9", "74.4", "77.0", "79.7", "82.5", "85
 digital_tones_list = ["023", "025", "026", "031", "032", "036", "043", "047", "051", "053", "054", "065", "071", "072", "073", "074", "114", "115", "116", "122", "125", "131", "132", "134", "143", "145", "152", "155", "156", "162", "165", "172", "174", "205", "212", "223", "225", "226", "243", "244", "245", "246", "251", "252", "255", "261", "263", "265", "266", "271", "274", "306", "311", "315", "325", "331", "332", "343", "346", "351", "356", "364", "365", "371", "411", "412", "413", "423", "431", "432", "445", "446", "452", "454", "455", "462", "464", "465", "466", "503", "506", "516", "523", "526", "532", "546", "565", "606", "612", "624", "627", "631", "632", "654", "662", "664", "703", "712", "723", "731", "732", "734", "743", "754"]
 tone_modes_dict = {1: "Analog Tone", 2: "Digital Tone", -1: "Analog Reverse", -2: "Digital Reverse"}
 dig_tone_modes_dict = {0: "Both Normal", 1: "Tx Normal - Rx Reverse", 2: "Tx Reverse - Rx Normal", 3: "Both Reverse"}
+chirp_tone_modes_dict = {0: "NN", 1: "NR", 2: "RN", 3: "RR"}
 
+# Memory bank definition
 class MemoryBank:
     """Contains the definition of the memory channel"""
     memory_index: int
@@ -41,6 +43,9 @@ class MemoryBank:
     # 2: TR-RN
     # 3: Both R
     dig_polarity: int
+    comment: str
+    rpt1_call: str
+    rpt2_call: str
     def __init__(self, in_index: int,
                         in_name: str,
                         rx_freq: int,
@@ -55,7 +60,10 @@ class MemoryBank:
                         in_your_call: str = "",
                         in_tx_tone: int = 0,
                         in_rx_tone: int = 0,
-                        in_dig_polarity: int = 0):
+                        in_dig_polarity: int = 0,
+                        in_comment: str = "",
+                        in_rpt1: str = "",
+                        in_rpt2: str = ""):
         self.memory_index = in_index
         self.memory_name = in_name
         self.tx_freq = tx_freq
@@ -71,6 +79,9 @@ class MemoryBank:
         self.tx_tone = in_tx_tone
         self.rx_tone = in_rx_tone
         self.dig_polarity = in_dig_polarity
+        self.comment = in_comment
+        self.rpt1_call = in_rpt1
+        self.rpt2_call = in_rpt2
 
     def get_split_offset(self) -> list[int, str]:
         """Returns a list containing the split offset (int) and the direction (int)"""
@@ -82,7 +93,7 @@ class MemoryBank:
             offset_dir = -1
         else:
             offset_dir = 0
-        return freq_offset, offset_dir
+        return abs(freq_offset), offset_dir
 
     def print_bank(self) -> None:
         """Prints the current channel informations in console"""
@@ -112,6 +123,37 @@ class MemoryBank:
         if self.digital_tx_tone_index >= 0 and self.digital_tx_tone_index < len(digital_tones_list):
             print(f"Digital TX Tone: [{digital_tones_list[self.digital_tx_tone_index]}]")
 
+    def get_chirp_csv_line(self) -> str:
+        """Return a string in the CHIRP format"""
+        chirp_offset, offset_dir = self.get_split_offset()
+        if offset_dir > 0:
+            chirp_offset_dir = "+"
+        elif offset_dir < 0:
+            chirp_offset_dir = "-"
+        else:
+            chirp_offset_dir = ""
+        # Convert to CHIRP tone
+        if self.tx_tone == 1:
+            chirp_tone = "Tone"
+        else:
+            chirp_tone = ""
+        # Read analog tones
+        if self.analog_tx_tone_index > 0 and self.analog_tx_tone_index < len(analog_tones_list):
+            chirp_analog_tx_tone = analog_tones_list[self.analog_tx_tone_index]
+        else:
+            chirp_analog_tx_tone = ""
+        if self.analog_rx_tone_index > 0 and self.analog_rx_tone_index < len(analog_tones_list):
+            chirp_analog_rx_tone = analog_tones_list[self.analog_rx_tone_index]
+        else:
+            chirp_analog_rx_tone = ""
+        # Read digital tones
+        if self.digital_tx_tone_index > 0 and self.digital_tx_tone_index < len(digital_tones_list):
+            chirp_digital_tx_tone = digital_tones_list[self.digital_tx_tone_index]
+        else:
+            chirp_digital_tx_tone = ""
+        return f"{str(self.memory_index)},{self.memory_name.strip()},{self.rx_freq},{chirp_offset_dir},{chirp_offset},{chirp_tone},{chirp_analog_tx_tone},{chirp_analog_rx_tone},{chirp_digital_tx_tone},{chirp_tone_modes_dict.get(self.dig_polarity)},{self.ch_mode},{self.tuning_step},,{self.comment},{self.your_call},{self.rpt1_call},{self.rpt2_call},"
+
+# Convert from HEX to ASCII
 def hex_to_ascii(input_data: str, start_index: int, stop_index: int) -> str:
     """Converts a list of HEX Bytes to the corresponding string"""
     return str(bytes.fromhex(input_data[start_index:stop_index])).replace("b\'","").replace("\'","")
@@ -161,3 +203,23 @@ def get_cli_args(input_args: list[str]) -> list[str, str, int, int]:
             last_channel = 499
             logging.warning("Fefaulting to max 499 channels")
     return inputfile, outputfile, first_channel, last_channel
+
+# Chirp CSV header
+def chirp_header() -> str:
+    """Return the standard header for CHIRP"""
+    return "Location,Name,Frequency,Duplex,Offset,Tone,rToneFreq,cToneFreq,DtcsCode,DtcsPolarity,Mode,TStep,Skip,Comment,URCALL,RPT1CALL,RPT2CALL,DVCODE"
+
+# Write CSV file
+def write_chirp_csv(output_path: str, memories_list: list[MemoryBank]) -> bool:
+    """Export CSV file according to CHIRP specifications"""
+    with open(output_path, "w", encoding="UTF-8") as output_content:
+        output_content.write(f"{chirp_header()}\n")
+        for single_memory in memories_list:
+            output_content.write(f"{single_memory.get_chirp_csv_line()}\n")
+
+# Sample CHIRP file
+# Location,Name,Frequency,Duplex,Offset,Tone,rToneFreq,cToneFreq,DtcsCode,DtcsPolarity,Mode,TStep,Skip,Comment,URCALL,RPT1CALL,RPT2CALL
+# 0,GB3AL,145.7375,-,0.6,Tone,77,77,023,NN,FM,5.00,,,,,x,
+# 1,GB3AU,433.1750,+,1.6,Tone,82.5,82.5,023,NN,FM,5.00,,,,,x,
+# 2,GB3AV,433.0500,+,1.6,Tone,118.8,118.8,023,NN,FM,5.00,,,,,x,
+# 3,GB3AW,433.2500,+,1.6,Tone,71.9,71.9,023,NN,FM,5.00,,,,,x,
