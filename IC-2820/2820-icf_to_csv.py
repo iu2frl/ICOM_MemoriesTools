@@ -8,7 +8,7 @@ from functions import MemoryBank
 
 # Variables specific to this radio
 tuning_steps_list: list[str] = ["5000", "6250", "10000", "12500", "15000", "20000", "25000", "30000", "50000"]
-# This must map to the dictionary in functions.py
+# These dictionaries must map to the ones in functions.py
 tone_modes: dict = {"00": "None",
                     "04": "Tone",
                     "0C": "TSQL",
@@ -18,6 +18,11 @@ tone_modes: dict = {"00": "None",
                     "44": "Tone",
                     "24": "Tone",
                     "2C": "TSQL"}
+ch_modes: dict = {"00": "FM",
+                  "04": "NFM",
+                  "08": "AM",
+                  "0C": "NAM",
+                  "10": "DV"}
 # List of decoded channels
 channels_list: list[MemoryBank] = []
 
@@ -38,17 +43,13 @@ def get_split(input_bank: list[str]) -> str:
 # Get mode from the current bank
 def get_mode(input_bank: list[str]) -> str:
     """Extracts the TX Mode from the memory bank(s)"""
-    tmp_mode = input_bank[2][16:17]
-    if tmp_mode == "0":
+    tmp_mode = input_bank[2][15:17]
+    channel_mode = ch_modes.get(tmp_mode)
+    if channel_mode is None:
+        logging.error(f"Cannot detect mode: [{tmp_mode}]")
         return "FM"
-    elif tmp_mode == "4":
-        return "NFM"
-    elif tmp_mode == "8":
-        return "AM"
-    elif tmp_mode == "C":
-        return "NAM"
     else:
-        return "Unknown-" + tmp_mode
+        return channel_mode
 
 # Get tone from the current bank
 def get_tone(input_bank: list[str]) -> str:
