@@ -84,6 +84,7 @@ def get_dtcs_tone(input_bank: list[str]) -> int:
 # Process ICF to CSV
 def icf_to_csv(input_file_path: str, output_file_path: str, first_channel: int, last_channel: int):
     """Converts an ICF file to a CSV"""
+    
     with open(input_file_path, "r", encoding="UTF-8") as input_stream:
         # Read file content
         input_file_content = input_stream.readlines()
@@ -165,9 +166,12 @@ def icf_to_csv(input_file_path: str, output_file_path: str, first_channel: int, 
             # Create channel class
             new_channel = MemoryBank(i, channel_name, rx_freq, tx_freq, tuning_step, chan_mode, rpt_tone, rpt_tsql, dig_tone, dig_tone, my_call, your_call, tx_tone, rx_tone, dig_polarity)
             channels_list.append(new_channel)
+            
             # Print for debug
             logging.debug(memory_bank.hex_string)
-            print(memory_bank.hex_string)
+            # Print the useful part of third bank
+            print(memory_bank.bin_string[2][16:-32])
+            
     for single_bank in channels_list:
         # Print channel information
         print()

@@ -26,12 +26,12 @@ So, we know the memories are composed of three lines
 000 010 08A9AC9C 000927C0 435143514351 2020
 ```
 
-- Char 0 to 2 are the lines counter for the file, starting from `000` and stopping at ACB
-- Char 3 to 5 are always fixed at `010`
-- Char 6 to 14 are the frequency encoding as described below
-- Char 14 to 22 are the frequency offset
-- Char 22 to 34 are the YOUR CALL for DV data
-- Char 34 to 38 are unknown
+- Digit 0 to 2 are the lines counter for the file, starting from `000` and stopping at ACB
+- Digit 3 to 5 are always fixed at `010`
+- Digit 6 to 14 are the frequency encoding as described below
+- Digit 14 to 22 are the frequency offset
+- Digit 22 to 34 are the YOUR CALL for DV data
+- Digit 34 to 38 are unknown
 
 #### Second line
 
@@ -39,27 +39,27 @@ So, we know the memories are composed of three lines
 001 010 20202020202020202020202020202020
 ```
 
-- Char 0 to 2 are the lines counter for the file, starting from `000` and stopping at ACB
-- Char 3 to 5 are always fixed at `010`
+- Digit 0 to 2 are the lines counter for the file, starting from `000` and stopping at ACB
+- Digit 3 to 5 are always fixed at `010`
 
 #### Third line
 
 ```txt
-002 010 72 0 02 08 3 00 0 90000 415249204D4E2D56
-12E 010 72 4 02 08 1 01 0 00000 4952335547204247
-03E 010 72 1 82 08 5 CC 0 00000 2020202020202020
+00201072 00208300090000 415249204D4E2D56
+12E01072 40208101000000 4952335547204247
+03E01072 182085CC000000 2020202020202020
 ```
 
-- Char 0 to 2 are the lines counter for the file, starting from `000` and stopping at `ACB`
-- Char 3 to 5 are `unknown` and always marking `010`
-- Char 6 and 7 are `unknown` and always marking `72`
-- Char 8 is the `split mode index` (None, Pos or Neg)
-- Char 10 and 11 are the `tone squelch index`
-- Char 12 is `unknown`
-- Char 13 is the `tuning step`
-- Char 14 to 15 is the `DTCS tone`
-- Char 15 to 16 is the `channel mode` (FM, AM, etc)
-- Char 17 to  to the end are the `channel name` ASCI characters (8 characters)
+- Digit 0 to 2 are the lines counter for the file, starting from `000` and stopping at `ACB`
+- Digit 3 to 5 are `unknown` and always marking `010`
+- Digit 6 and 7 are `unknown` and always marking `72`
+- Digit 8 is the `split mode index` (None, Pos or Neg)
+- Digit 10 and 11 are the `tone squelch index`
+- Digit 12 is `unknown`
+- Digit 13 is the `tuning step`
+- Digit 14 to 15 is the `DTCS tone`
+- Digit 15 to 16 is the `channel mode` (FM, AM, etc)
+- Digit 17 to  to the end are the `channel name` ASCI characters (8 characters)
 
 ## Decoding data
 
