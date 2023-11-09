@@ -1,5 +1,7 @@
 # IC-2820 ICF file
+
 ICF files are HEX streams that contains information for each memory bank, structure is something similar to:
+
 ```
 1. Some number (not decoded yet, maybe radio ID or region?)
 2. Callsign
@@ -9,11 +11,15 @@ ICF files are HEX streams that contains information for each memory bank, struct
 6. First line of second memory channel
 ...
 ```
+
 So, excluding first two lines we can assume each memory is split into three lines, considering we have 500 memories, we know that memories starts from line 2 up to 1502 (500 memories * 3 lines)
 
 ### Memories
+
 So, we know the memories are composed of three lines
+
 #### First line
+
 ```
 000 010 08A9AC9C 000927C0 435143514351 2020
 ```
@@ -25,6 +31,7 @@ So, we know the memories are composed of three lines
 - Bytes 34 to 38 are unknown
 
 #### Second line
+
 ```
 001 010 20202020202020202020202020202020
 ```
@@ -32,6 +39,7 @@ So, we know the memories are composed of three lines
 - Bytes 3 to 5 are always fixed at `010`
 
 ### Third line
+
 ```
 002 010 72 0 02 08 3 00 0 90000 415249204D4E2D56
 ```
@@ -46,7 +54,9 @@ So, we know the memories are composed of three lines
 # Decoding data
 
 ## Frequency encoding and decoding
+
 By checking the input ICF i tried saving multiple memories with different content, example each 1st line:
+
 ```
 000010 08A9AC9C 000927C04351435143512020 -> 145.337500
 000010 089A6A5C 000927C04351435143512020 -> 144.337500
@@ -56,9 +66,11 @@ By checking the input ICF i tried saving multiple memories with different conten
 000010 0BEBC200 000927C04351435143512020 -> 200.000000
 000010 0BFB0440 000927C04351435143512020 -> 201.000000
 ```
+
 Then i started reverse engineering and i discovered a pattern
 
 ### Encoding Process
+
 1. Take the decimal value you want to encode.
 2. Multiply the decimal value by 2^24 (16777216).
 3. Convert the result to a hexadecimal representation.
@@ -74,6 +86,7 @@ encoded_hex = encode_decimal_to_hex(decimal_value)
 print(encoded_hex)
 ```
 ### Decoding Process
+
 1. Take the hexadecimal value you want to decode.
 2. Convert the hexadecimal value to a decimal representation.
 3. Divide the decimal value by 2^24 (16777216).
@@ -87,9 +100,12 @@ def decode_hex_to_decimal(hex_value):
 hex_value = "08A9AC9C"
 decoded_decimal = decode_hex_to_decimal(hex_value)
 print(decoded_decimal)
+
 ```
 ## Frequency offset
+
 I got this data from the ICF file at every 1st line:
+
 ```
 00001008A9AC9C 000186A0 4351435143512020 -> 0.100000
 00001008A9AC9C 00030D40 4351435143512020 -> 0.200000
@@ -119,7 +135,9 @@ print(f"Hexadecimal: {hex_value} -> Decimal: {decoded_decimal}")
 ```
 
 ## Duplex mode
+
 To get the duplex mode (positive or negative shift) i got from each 3rd line:
+
 ```
 00201072 0 0208300090000415249204D4E2D56 -> No shift
 00201072 2 0208300090000415249204D4E2D56 -> Negative
@@ -127,7 +145,9 @@ To get the duplex mode (positive or negative shift) i got from each 3rd line:
 ```
 
 ## Tuning step
+
 For the tuning steps we have in each 3rd line:
+
 ```
 0020107200208 0 000000002020202020202020 -> 5k
 0050107200208 1 000000002020202020202020 -> 6.25k
@@ -150,7 +170,9 @@ print(" Tuning step: [" + tuningStep + "]")
 ```
 
 ## Mode
+
 For the different modes i found per each 3rd line:
+
 ```
 0020107200208000 0 000002020202020202020 -> FM
 0050107200208000 4 000002020202020202020 -> FM-N
@@ -159,7 +181,9 @@ For the different modes i found per each 3rd line:
 ```
 
 ## Skip mode
+
 Skip can be set as Skip or PSkip, here is the output:
+
 ```
 0000 1008A48640000000004351435143512020  0010 1020202020202020202020202020202020  0020 1072002080000000002020202020202020 -> Skip
 0030 1008A48640000000004351435143512020  0040 1020202020202020202020202020202020  0050 1072002080000000002020202020202020 -> PSkip
@@ -168,10 +192,13 @@ Skip can be set as Skip or PSkip, here is the output:
 00C0 1008A48640000000004351435143512020  00D0 1020202020202020202020202020202020  00E0 1072002080000000002020202020202020 -> PSkip
 00F0 1008A48640000000004351435143512020  0100 1020202020202020202020202020202020  0110 1072002080000000002020202020202020 -> PSkip
 ```
+
 I could not find any pattern here, any help is appreciated
 
 ## Tone mode
+
 Having this input per each 3rd line:
+
 ```
 00201072 04 2080000000002020202020202020 -> Tone
 00501072 0C 2080000000002020202020202020 -> TSQL
@@ -184,7 +211,9 @@ Having this input per each 3rd line:
 ```
 
 ## Repeater tones
+
 Having this input per each 3rd line:
+
 ```
 00201072 0 4 20 00 000000002020202020202020 -> 67.0 (0)
 00501072 0 4 20 10 000000002020202020202020 -> 69.3 (1)
@@ -214,15 +243,37 @@ Having this input per each 3rd line:
 01D01072 4 4 04 05 000000002020202020202020 -> DUP+ + Tone 67.0 + TSQL 69.3
 ```
 
+## DTCS Tone
+
+Having this input per each 3rd line:
+
+```
+023 01072182085 02 0000002020202020202020 -> 025 - 1
+026 010721C2085 04 0000002020202020202020 -> 026 - 2
+029 01072182085 02 0000102020202020202020 -> 025 - 1
+02C 010721C2085 04 0000102020202020202020 -> 026 - 2
+02F 01072182085 02 0000202020202020202020 -> 025 - 1
+032 010721C2085 00 0000202020202020202020 -> 023 - 0
+035 01072182085 02 0000302020202020202020 -> 025 - 1
+038 010721C2085 04 0000302020202020202020 -> 026 - 2
+03B 01072182085 CE 0000002020202020202020 -> 754 - 103
+03E 01072182085 CC 0000002020202020202020 -> 743 - 102
+```
+
 ## Channel name
+
 Channel name is encoded in the 3rd line of the channel:
+
 ```
 563010724420A600000000 525533312D56454E -> RU31-VEN
 ```
 
 ## DV Data
+
 ### YOUR CALL
+
 The destination callsign is easy to get and comes from the 1st line:
+
 ```
 00001008A9AC9C000927C0 435143514351 2020 -> CQCQCQ
 ```

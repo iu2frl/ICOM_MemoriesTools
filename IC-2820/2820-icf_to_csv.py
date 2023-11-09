@@ -1,5 +1,6 @@
 # Import custom packages
 import sys
+import logging
 sys.path.append("../")
 import functions
 from functions import analog_tones_list
@@ -7,7 +8,14 @@ from functions import MemoryBank
 
 # Variables specific to this radio
 tuning_steps_list: list[str] = ["5000", "6250", "10000", "12500", "15000", "20000", "25000", "30000", "50000"]
-tone_modes: dict = {"00": "None", "04": "Tone", "0C": "TSQL", "10": "TSQL-R", "18": "DTCS", "1C": "DTCR-R"}
+# This must map to the dictionary in functions.py
+tone_modes: dict = {"00": "None",
+                    "04": "Tone",
+                    "0C": "TSQL",
+                    "10": "TSQL-R",
+                    "18": "DTCS",
+                    "1C": "DTCR-R",
+                    "44": "Tone"}
 # List of decoded channels
 channels_list: list[MemoryBank] = []
 
@@ -36,7 +44,7 @@ def get_mode(input_bank: list[str]) -> str:
     elif tmp_mode == "8":
         return "AM"
     elif tmp_mode == "C":
-        return "AM-N" 
+        return "AM-N"
     else:
         return "Unknown-" + tmp_mode
 
@@ -46,13 +54,26 @@ def get_tone(input_bank: list[str]) -> str:
     return tone_modes.get(input_bank[2][8:10])
 
 # Get the Tone Squelch
-def get_tsql(input_bank: list[str]) -> str:
+def get_tsql(input_bank: list[str]) -> int:
     """Extracts the TSQL information from the memory bank(s)"""
     hex_string = input_bank[2][10:12]
     hex_value = int(hex_string, 16)  # Convert hexadecimal string to integer
     lower_byte = hex_value & 0xFF  # Extract the lower byte (last two characters)
     number = lower_byte // 4  # Divide the lower byte by 4
-    return analog_tones_list[number]
+    return int(number)
+
+# Get the DTCS mode
+def get_dtcs_polarity(input_bank: list[str]) -> int:
+    """Extracts the DTCS polarity from the memory bank(s)"""
+    hex_string = input_bank[2][20:21]
+    return int(hex_string)
+
+# Get DTCS tone
+def get_dtcs_tone(input_bank: list[str]) -> int:
+    """Extract DTCS Tone index from memories"""
+    hex_string = input_bank[2][14:16]
+    int_value = int(hex_string, 16)
+    return int(int_value/2)
 
 def main():
     """Main program process"""
@@ -63,13 +84,14 @@ def main():
     with open(input_file_path, "r") as input_stream:
         # Read file content
         input_file_content = input_stream.readlines()
-        print("Found memory file by [" + input_file_content[1].rstrip().replace("#", "") + "]")
-        print("Reading channels from [" + str(first_channel) + "] to [" + str(last_channel) + "]")
+        my_call = input_file_content[1].rstrip().replace("#", "")
+        logging.info(f"Found memory file by [{my_call}]")
+        logging.info(f"Reading channels from [{first_channel}] to [{last_channel}]")
         first_row = (first_channel * 3) + 2
         last_row = (last_channel * 3) + 2
-        print("Reading lines from [" + str(first_row) + "] to [" + str(last_row) + "]")
+        logging.debug(f"Reading lines from [{first_row}] to [{last_row}]")
         input_file_content = input_file_content[first_row:last_row]
-        print(len(input_file_content))
+        logging.debug(f"File length: [{len(input_file_content)}]")
         # Loop per each memory bank and extract data
         for i in range(int(len(input_file_content)/3)):
             # Read real value from the file
@@ -79,47 +101,74 @@ def main():
             for single_line in tmp_bank:
                 memory_bank.append(single_line.strip())
             # Extract frequency from the memory bank
-            freq_MHz = str(int(memory_bank[0][6:14], 16))
-            if (int(freq_MHz) <= 5000):
+            rx_freq =int(memory_bank[0][6:14], 16)
+            if (rx_freq <= 5000):
                 #print("Memory bank [" + str(i) + "] is empty, skipping")
                 continue
             # Memory band is valid
-            print("Found memory bank [" + str(i) + "]")
+            logging.debug(f"Found memory bank [{i}]")
             # Extract bank name
             channel_name = str(bytes.fromhex(memory_bank[2][22:])).replace("b\'","").replace("\'","")
             # Extract split
             split = get_split(memory_bank)
             # Extract frequency offset
-            freq_offset = str(int(memory_bank[0][14:22], 16))
+            freq_offset = int(memory_bank[0][14:22], 16)
             # Extract tuning step
-            tuning_step = tuning_steps_list[int(memory_bank[2][13:14])]
+            tuning_step = int(tuning_steps_list[int(memory_bank[2][13:14])])
             # Extract mode
             chan_mode = get_mode(memory_bank)
             # Extract tone mode
             chan_tone = get_tone(memory_bank)
             if chan_tone is None:
-                chan_tone = "Unknown"
+                chan_tone = -1
             # Extract TX analog RPT tone
             try:
-                rpt_tone = analog_tones_list[int(memory_bank[2][11:13], 16)]
+                rpt_tone = int(memory_bank[2][11:13], 16)
             except:
-                rpt_tone = "None"
+                rpt_tone = -1
             # Extract RX analog RPT tone
             rpt_tsql = get_tsql(memory_bank)
             # Extract YOUR callsign (for DV)
             your_call = str(bytes.fromhex(memory_bank[0][22:34])).replace("b\'","").replace("\'","")
-            # Print channel information
-            print(memory_bank)
-            print(" Channel name: [" + channel_name + "]")
-            print(" Frequency: [" + freq_MHz + "] Hz")
-            print(" Split: [" + split + "]")
-            print(" Offset: [" + freq_offset + "] Hz")
-            print(" Tuning step: [" + tuning_step + "]")
-            print(" Mode: [" + chan_mode + "]")
-            print(" Tone mode: [" + chan_tone + "]")
-            print(" Analog RPT tone: [" + rpt_tone + "]")
-            print(" Analog TSQL: [" + rpt_tsql + "]")
-            print(" Your CALL: [" + your_call + "]")
+            # Create channel object 
+            if split == "+":
+                tx_freq = rx_freq + freq_offset
+            elif split == "-":
+                tx_freq = rx_freq - freq_offset
+            else:
+                tx_freq = rx_freq
+            # Create generic tone mode
+            if chan_tone == "None":
+                tx_tone = 0
+                rx_tone = 0
+            elif chan_tone == "Tone":
+                tx_tone = 1
+                rx_tone = 0
+            elif chan_tone == "TSQL":
+                tx_tone = 1
+                rx_tone = 1
+            elif chan_tone == "TSQL-R":
+                tx_tone = -1
+                rx_tone = -1
+            elif chan_tone == "DTCS":
+                tx_tone = 2
+                rx_tone = 0
+            elif chan_tone == "DTCS-R":
+                tx_tone = -2
+                rx_tone = -2
+            # Get DCS Tone
+            dig_tone = get_dtcs_tone(memory_bank)
+            dig_polarity = get_dtcs_polarity(memory_bank)
+            # Create channel class
+            new_channel = MemoryBank(i, channel_name, rx_freq, tx_freq, tuning_step, chan_mode, rpt_tone, rpt_tsql, dig_tone, dig_tone, my_call, your_call, tx_tone, rx_tone, dig_polarity)
+            channels_list.append(new_channel)
+            # Print for debug
+            logging.debug(memory_bank)
+            print(f"{i}\t{memory_bank}")
+    for single_bank in channels_list:
+        # Print channel information
+        print()
+        single_bank.print_bank()
             
 if __name__ == "__main__":
     main()
