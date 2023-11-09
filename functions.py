@@ -47,6 +47,7 @@ class MemoryBank:
     comment: str
     rpt1_call: str
     rpt2_call: str
+    skip: str
     def __init__(self, in_index: int,
                         in_name: str,
                         rx_freq: int,
@@ -83,6 +84,7 @@ class MemoryBank:
         self.comment = in_comment
         self.rpt1_call = in_rpt1
         self.rpt2_call = in_rpt2
+        self.skip = ""
 
     def get_split_offset(self) -> list[int, str]:
         """Returns a list containing the split offset (int) and the direction (int)"""
@@ -106,7 +108,7 @@ class MemoryBank:
             print(f"Freq shift: [{self.get_split_offset()[0]}] Hz")
         print(f"Tuning step: [{self.tuning_step}] Hz")
         print(f"Mode: [{self.ch_mode}]")
-        print("Skip: [not implemented yet]")
+        #print(f"Skip: [{self.skip}]")
         if self.analog_tx_tone_index >= 0 and self.analog_tx_tone_index < len(analog_tones_list):
             print(f"Analog TX Tone: [{analog_tones_list[self.analog_tx_tone_index]}]")
         if self.analog_rx_tone_index >= 0 and self.analog_rx_tone_index < len(analog_tones_list):
@@ -167,26 +169,32 @@ class MemoryBank:
         # Offset
         chirp_offset = str(chirp_offset)[:-1]
         chirp_offset = f"{chirp_offset[:-5]}.{chirp_offset[-5:]}"
-        return f"{str(self.memory_index)},{self.memory_name.strip()},{chirp_rx_freq},{chirp_offset_dir},{chirp_offset},{chirp_tone},{chirp_analog_tx_tone},{chirp_analog_rx_tone},{chirp_digital_tx_tone},{chirp_tone_modes_dict.get(self.dig_polarity)},{self.ch_mode},{self.tuning_step},,{self.comment},{self.your_call},{self.rpt1_call},{self.rpt2_call},"
+        return f"{str(self.memory_index)},{self.memory_name.strip()},{chirp_rx_freq},{chirp_offset_dir},{chirp_offset},{chirp_tone},{chirp_analog_tx_tone},{chirp_analog_rx_tone},{chirp_digital_tx_tone},{chirp_tone_modes_dict.get(self.dig_polarity)},{self.ch_mode},{self.tuning_step},{self.skip},{self.comment},{self.your_call},{self.rpt1_call},{self.rpt2_call},"
 
 # Convert from HEX to ASCII
 def hex_to_ascii(input_data: str, start_index: int, stop_index: int) -> str:
     """Converts a list of HEX Bytes to the corresponding string"""
     return str(bytes.fromhex(input_data[start_index:stop_index])).replace("b\'","").replace("\'","")
 
+# Print help lines to console
+def print_help_lines() -> None:
+    """Print help information"""
+    print("Syntax:")
+    print("\tpython filename.py -i <inputfile> -o <outputfile>")
+    print("\tOptional: -f <firstCh> -l <lastCh>")
+
 # Get arguments from terminal
 def get_cli_args(input_args: list[str]) -> list[str, str, int, int]:
     """Returns: name of input file (str), name of output file (str), first channel to read (int), last channel to read (int)"""
-    first_channel = ""
-    last_channel = ""
-    inputfile = ""
-    outputfile = ""
+    first_channel: str = ""
+    last_channel: str = ""
+    inputfile: str = ""
+    outputfile: str = ""
     opts, arg = getopt.getopt(input_args,"hi:o:f:l:",["ifile=", "ofile=", "first=", "last="])
     for opt, arg in opts:
         if opt == '-h':
-            print(os.path.basename(__file__) + ' -i <inputfile> -o <outputfile>')
-            print("Optional: -f <firstCh> -l <lastCh>")
-            sys.exit()
+            print_help_lines()
+            sys.exit(1)
         elif opt in ("-i", "--ifile"):
             inputfile = arg
         elif opt in ("-o", "--ofile"):
@@ -195,30 +203,28 @@ def get_cli_args(input_args: list[str]) -> list[str, str, int, int]:
             first_channel = arg
         elif opt in ("-l", "--last"):
             last_channel = arg
-    if inputfile.endswith(".icf"):
+    if inputfile.endswith(".icf") or inputfile.endswith(".csv"):
         logging.info("Input file is [%s]", inputfile)
     else:
-        logging.error("No ICF file was given as input!")
-        return None
+        print_help_lines()
+        sys.exit(1)
     if inputfile.endswith(".csv"):
         logging.info("Output file is [%s]", outputfile)
     else:
-        outputfile = ntpath.basename(inputfile.replace(".icf", ".csv"))
+        if inputfile.endswith(".icf"):
+            outputfile = ntpath.basename(inputfile.replace(".icf", ".csv"))
+        else:
+            outputfile = ntpath.basename(inputfile.replace(".csv", ".icf"))
         logging.warning("No output file was given, defaulting to [%s]", outputfile)
     if first_channel == "":
-        first_channel = 0
+        first_channel = "0"
         logging.warning("No starting channel was given, defaulting to 0")
     else:
         first_channel = int(first_channel)
     if last_channel == "":
-        last_channel = 499
-        logging.warning("No ending channel was given, defaulting to 499")
-    else:
-        last_channel = int(last_channel)
-        if last_channel > 499:
-            last_channel = 499
-            logging.warning("Fefaulting to max 499 channels")
-    return inputfile, outputfile, first_channel, last_channel
+        last_channel = "0"
+        logging.warning("No ending channel was given, defaulting to max")
+    return inputfile, outputfile, int(first_channel), int(last_channel)
 
 # Chirp CSV header
 def chirp_header() -> str:

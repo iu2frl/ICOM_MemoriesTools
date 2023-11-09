@@ -75,12 +75,9 @@ def get_dtcs_tone(input_bank: list[str]) -> int:
     int_value = int(hex_string, 16)
     return int(int_value/2)
 
-def main():
-    """Main program process"""
-    cli_srguments = functions.get_cli_args(sys.argv[1:])
-    if cli_srguments is None:
-        return
-    input_file_path, output_file_path, first_channel, last_channel = cli_srguments
+# Process ICF to CSV
+def icf_to_csv(input_file_path: str, output_file_path: str, first_channel: int, last_channel: int):
+    """Converts an ICF file to a CSV"""
     with open(input_file_path, "r", encoding="UTF-8") as input_stream:
         # Read file content
         input_file_content = input_stream.readlines()
@@ -169,6 +166,26 @@ def main():
         print()
         single_bank.print_bank()
     functions.write_chirp_csv(output_file_path, channels_list)
+
+# Process CSV to ICF
+def csv_to_icf(input_file_path: str, output_file_path: str, first_channel: int, last_channel: int):
+    """Process a Chirp CSV file into an ICF format"""
+    return NotImplementedError
+
+def main():
+    """Main program process"""
+    # Check CLI arguments
+    input_file_path, output_file_path, first_channel, last_channel = functions.get_cli_args(sys.argv[1:])
+    # Check max value
+    if last_channel == 0 or last_channel > 499:
+        last_channel = 499
+    # Check which program to begin
+    if ".icf" in input_file_path:
+        icf_to_csv(input_file_path, output_file_path, first_channel, last_channel)
+    elif ".csv" in input_file_path:
+        csv_to_icf(input_file_path, output_file_path, first_channel, last_channel)
+    else:
+        return
 
 if __name__ == "__main__":
     main()
