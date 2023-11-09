@@ -40,11 +40,11 @@ def get_mode(input_bank: list[str]) -> str:
     if tmp_mode == "0":
         return "FM"
     elif tmp_mode == "4":
-        return "FM-N"
+        return "NFM"
     elif tmp_mode == "8":
         return "AM"
     elif tmp_mode == "C":
-        return "AM-N"
+        return "NAM"
     else:
         return "Unknown-" + tmp_mode
 
@@ -138,10 +138,7 @@ def main():
             else:
                 tx_freq = rx_freq
             # Create generic tone mode
-            if chan_tone == "None":
-                tx_tone = 0
-                rx_tone = 0
-            elif chan_tone == "Tone":
+            if chan_tone == "Tone":
                 tx_tone = 1
                 rx_tone = 0
             elif chan_tone == "TSQL":
@@ -156,6 +153,9 @@ def main():
             elif chan_tone == "DTCS-R":
                 tx_tone = -2
                 rx_tone = -2
+            else:
+                tx_tone = 0
+                rx_tone = 0
             # Get DCS Tone
             dig_tone = get_dtcs_tone(memory_bank)
             dig_polarity = get_dtcs_polarity(memory_bank)

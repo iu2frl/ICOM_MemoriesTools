@@ -13,6 +13,7 @@ digital_tones_list = ["023", "025", "026", "031", "032", "036", "043", "047", "0
 tone_modes_dict = {1: "Analog Tone", 2: "Digital Tone", -1: "Analog Reverse", -2: "Digital Reverse"}
 dig_tone_modes_dict = {0: "Both Normal", 1: "Tx Normal - Rx Reverse", 2: "Tx Reverse - Rx Normal", 3: "Both Reverse"}
 chirp_tone_modes_dict = {0: "NN", 1: "NR", 2: "RN", 3: "RR"}
+chirp_ch_modes = ['WFM', 'FM', 'NFM', 'AM', 'NAM', 'DV', 'USB', 'LSB', 'CW', 'RTTY', 'DIG', 'PKT', 'NCW', 'NCWR', 'CWR', 'P25', 'Auto', 'RTTYR', 'FSK', 'FSKR', 'DMR', 'FSK-R', 'CW-R', 'Data+LSB', 'Data+USB', 'Data+FM', 'USER-L', 'USER-U', 'LSB+CW', 'USB+CW', 'RTTY-L', 'RTTY-U', 'N/A']
 
 # Memory bank definition
 class MemoryBank:
@@ -85,7 +86,7 @@ class MemoryBank:
 
     def get_split_offset(self) -> list[int, str]:
         """Returns a list containing the split offset (int) and the direction (int)"""
-        freq_offset = self.rx_freq - self.tx_freq
+        freq_offset = self.tx_freq - self.rx_freq
         offset_dir = 0
         if freq_offset > 0:
             offset_dir = 1
@@ -101,6 +102,8 @@ class MemoryBank:
         print(f"Channel name: [{self.memory_name}]")
         print(f"RX Frequency: [{self.rx_freq}] Hz")
         print(f"TX Frequency: [{self.tx_freq}] Hz")
+        if self.get_split_offset()[1] != 0:
+            print(f"Freq shift: [{self.get_split_offset()[0]}] Hz")
         print(f"Tuning step: [{self.tuning_step}] Hz")
         print(f"Mode: [{self.ch_mode}]")
         print("Skip: [not implemented yet]")
@@ -135,23 +138,36 @@ class MemoryBank:
         # Convert to CHIRP tone
         if self.tx_tone == 1:
             chirp_tone = "Tone"
+        elif self.tx_tone == 2:
+            chirp_tone = "DTCS"
+        elif self.tx_tone == -2:
+            chirp_tone = "DTCS-R"
+        elif self.rx_tone == 1:
+            chirp_tone = "TSQL"
+        elif self.rx_tone == -1:
+            chirp_tone = "TSQL-R"
         else:
             chirp_tone = ""
         # Read analog tones
         if self.analog_tx_tone_index > 0 and self.analog_tx_tone_index < len(analog_tones_list):
             chirp_analog_tx_tone = analog_tones_list[self.analog_tx_tone_index]
         else:
-            chirp_analog_tx_tone = ""
+            chirp_analog_tx_tone = "67.0"
         if self.analog_rx_tone_index > 0 and self.analog_rx_tone_index < len(analog_tones_list):
             chirp_analog_rx_tone = analog_tones_list[self.analog_rx_tone_index]
         else:
-            chirp_analog_rx_tone = ""
+            chirp_analog_rx_tone = "67.0"
         # Read digital tones
         if self.digital_tx_tone_index > 0 and self.digital_tx_tone_index < len(digital_tones_list):
             chirp_digital_tx_tone = digital_tones_list[self.digital_tx_tone_index]
         else:
-            chirp_digital_tx_tone = ""
-        return f"{str(self.memory_index)},{self.memory_name.strip()},{self.rx_freq},{chirp_offset_dir},{chirp_offset},{chirp_tone},{chirp_analog_tx_tone},{chirp_analog_rx_tone},{chirp_digital_tx_tone},{chirp_tone_modes_dict.get(self.dig_polarity)},{self.ch_mode},{self.tuning_step},,{self.comment},{self.your_call},{self.rpt1_call},{self.rpt2_call},"
+            chirp_digital_tx_tone = "23"
+        # Receive frequency
+        chirp_rx_freq = f"{str(self.rx_freq)[:3]}.{str(self.rx_freq)[3:-1]}"
+        # Offset
+        chirp_offset = str(chirp_offset)[:-1]
+        chirp_offset = f"{chirp_offset[:-5]}.{chirp_offset[-5:]}"
+        return f"{str(self.memory_index)},{self.memory_name.strip()},{chirp_rx_freq},{chirp_offset_dir},{chirp_offset},{chirp_tone},{chirp_analog_tx_tone},{chirp_analog_rx_tone},{chirp_digital_tx_tone},{chirp_tone_modes_dict.get(self.dig_polarity)},{self.ch_mode},{self.tuning_step},,{self.comment},{self.your_call},{self.rpt1_call},{self.rpt2_call},"
 
 # Convert from HEX to ASCII
 def hex_to_ascii(input_data: str, start_index: int, stop_index: int) -> str:

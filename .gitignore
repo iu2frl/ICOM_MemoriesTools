@@ -162,5 +162,6 @@ cython_debug/
 # ICOM Stuff
 **.csv
 **.icf
+**.pyc
 
 !IC-2820/samples/**
