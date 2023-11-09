@@ -1,13 +1,11 @@
+"""Module providing common features for import/export of memories"""
+
 # Import native packages
 import os
 import sys
 import getopt
 import ntpath
 import logging
-
-####################################################
-# Common structures for all the different programs #
-####################################################
 
 # List of repeater tones
 analog_tones_list = ["67.0", "69.3", "71.9", "74.4", "77.0", "79.7", "82.5", "85.4", "88.5", "91.5", "94.8", "97.4", "100.0", "103.5", "107.2", "110.9", "114.8", "118.8", "123.0", "127.3", "131.8", "136.5", "141.3", "146.2", "151.4", "156.7", "159.8", "162.2", "165.5", "167.9", "171.3", "173.8", "177.9", "179.9", "183,5", "186.2", "189.9", "192.8", "196.6", "199.5", "203.5", "206.5", "210.7", "218.1", "225.7", "229.1", "233.6", "241.8", "250.3", "254.1"]
@@ -73,7 +71,7 @@ class MemoryBank:
         self.tx_tone = in_tx_tone
         self.rx_tone = in_rx_tone
         self.dig_polarity = in_dig_polarity
-    
+
     def get_split_offset(self) -> list[int, str]:
         """Returns a list containing the split offset (int) and the direction (int)"""
         freq_offset = self.rx_freq - self.tx_freq
@@ -85,7 +83,7 @@ class MemoryBank:
         else:
             offset_dir = 0
         return freq_offset, offset_dir
-    
+
     def print_bank(self) -> None:
         """Prints the current channel informations in console"""
         print(f"Channel number: [{self.memory_index}]")
@@ -94,7 +92,7 @@ class MemoryBank:
         print(f"TX Frequency: [{self.tx_freq}] Hz")
         print(f"Tuning step: [{self.tuning_step}] Hz")
         print(f"Mode: [{self.ch_mode}]")
-        print(f"Skip: [not implemented yet]")
+        print("Skip: [not implemented yet]")
         if self.analog_tx_tone_index >= 0 and self.analog_tx_tone_index < len(analog_tones_list):
             print(f"Analog TX Tone: [{analog_tones_list[self.analog_tx_tone_index]}]")
         if self.analog_rx_tone_index >= 0 and self.analog_rx_tone_index < len(analog_tones_list):
@@ -139,12 +137,12 @@ def get_cli_args(input_args: list[str]) -> list[str, str, int, int]:
             first_channel = arg
         elif opt in ("-l", "--last"):
             last_channel = arg
-    if (inputfile.endswith(".icf")):
+    if inputfile.endswith(".icf"):
         logging.info("Input file is [%s]", inputfile)
     else:
         logging.error("No ICF file was given as input!")
         return None
-    if (inputfile.endswith(".csv")):
+    if inputfile.endswith(".csv"):
         logging.info("Output file is [%s]", outputfile)
     else:
         outputfile = ntpath.basename(inputfile.replace(".icf", ".csv"))

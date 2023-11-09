@@ -81,17 +81,17 @@ def main():
     if cli_srguments is None:
         return
     input_file_path, output_file_path, first_channel, last_channel = cli_srguments
-    with open(input_file_path, "r") as input_stream:
+    with open(input_file_path, "r", encoding="UTF-8") as input_stream:
         # Read file content
         input_file_content = input_stream.readlines()
         my_call = input_file_content[1].rstrip().replace("#", "")
-        logging.info(f"Found memory file by [{my_call}]")
-        logging.info(f"Reading channels from [{first_channel}] to [{last_channel}]")
+        logging.info("Found memory file by [%s]", my_call)
+        logging.info("Reading channels from [%s] to [%s]", first_channel, last_channel)
         first_row = (first_channel * 3) + 2
         last_row = (last_channel * 3) + 2
-        logging.debug(f"Reading lines from [{first_row}] to [{last_row}]")
+        logging.debug("Reading lines from [%s] to [%s]", first_row, last_row)
         input_file_content = input_file_content[first_row:last_row]
-        logging.debug(f"File length: [{len(input_file_content)}]")
+        logging.debug("File length: [%s]", len(input_file_content))
         # Loop per each memory bank and extract data
         for i in range(int(len(input_file_content)/3)):
             # Read real value from the file
@@ -106,7 +106,7 @@ def main():
                 #print("Memory bank [" + str(i) + "] is empty, skipping")
                 continue
             # Memory band is valid
-            logging.debug(f"Found memory bank [{i}]")
+            logging.debug("Found memory bank [%s]", i)
             # Extract bank name
             channel_name = str(bytes.fromhex(memory_bank[2][22:])).replace("b\'","").replace("\'","")
             # Extract split
@@ -130,7 +130,7 @@ def main():
             rpt_tsql = get_tsql(memory_bank)
             # Extract YOUR callsign (for DV)
             your_call = str(bytes.fromhex(memory_bank[0][22:34])).replace("b\'","").replace("\'","")
-            # Create channel object 
+            # Create generic split mode
             if split == "+":
                 tx_freq = rx_freq + freq_offset
             elif split == "-":
@@ -164,11 +164,10 @@ def main():
             channels_list.append(new_channel)
             # Print for debug
             logging.debug(memory_bank)
-            print(f"{i}\t{memory_bank}")
     for single_bank in channels_list:
         # Print channel information
         print()
         single_bank.print_bank()
-            
+
 if __name__ == "__main__":
     main()

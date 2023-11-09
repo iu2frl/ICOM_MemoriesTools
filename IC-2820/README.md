@@ -48,6 +48,7 @@ So, we know the memories are composed of three lines
 - Byte 8 is the split mode index (None, Pos or Neg)
 - Bytes 10 and 11 are the tone squelch index
 - Byte 13 is the tuning step
+- Byte 14 to 16 is the DTCS tone
 - Bytes 16 is the mode (FM, AM, etc)
 - Bytes from 22 to the end are the channel name (8 characters)
 
