@@ -15,7 +15,9 @@ tone_modes: dict = {"00": "None",
                     "10": "TSQL-R",
                     "18": "DTCS",
                     "1C": "DTCR-R",
-                    "44": "Tone"}
+                    "44": "Tone",
+                    "24": "Tone",
+                    "2C": "TSQL"}
 # List of decoded channels
 channels_list: list[MemoryBank] = []
 
@@ -161,6 +163,7 @@ def icf_to_csv(input_file_path: str, output_file_path: str, first_channel: int, 
             channels_list.append(new_channel)
             # Print for debug
             logging.debug(memory_bank)
+            print(memory_bank)
     for single_bank in channels_list:
         # Print channel information
         print()

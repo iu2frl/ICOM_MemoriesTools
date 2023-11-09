@@ -6,6 +6,7 @@ import sys
 import getopt
 import ntpath
 import logging
+from decimal import Decimal
 
 # List of repeater tones
 analog_tones_list = ["67.0", "69.3", "71.9", "74.4", "77.0", "79.7", "82.5", "85.4", "88.5", "91.5", "94.8", "97.4", "100.0", "103.5", "107.2", "110.9", "114.8", "118.8", "123.0", "127.3", "131.8", "136.5", "141.3", "146.2", "151.4", "156.7", "159.8", "162.2", "165.5", "167.9", "171.3", "173.8", "177.9", "179.9", "183,5", "186.2", "189.9", "192.8", "196.6", "199.5", "203.5", "206.5", "210.7", "218.1", "225.7", "229.1", "233.6", "241.8", "250.3", "254.1"]
@@ -138,16 +139,16 @@ class MemoryBank:
         else:
             chirp_offset_dir = ""
         # Convert to CHIRP tone
-        if self.tx_tone == 1:
+        if self.rx_tone == 1:
+            chirp_tone = "TSQL"
+        elif self.rx_tone == -1:
+            chirp_tone = "TSQL-R"
+        elif self.tx_tone == 1:
             chirp_tone = "Tone"
         elif self.tx_tone == 2:
             chirp_tone = "DTCS"
         elif self.tx_tone == -2:
             chirp_tone = "DTCS-R"
-        elif self.rx_tone == 1:
-            chirp_tone = "TSQL"
-        elif self.rx_tone == -1:
-            chirp_tone = "TSQL-R"
         else:
             chirp_tone = ""
         # Read analog tones
@@ -166,10 +167,12 @@ class MemoryBank:
             chirp_digital_tx_tone = "23"
         # Receive frequency
         chirp_rx_freq = f"{str(self.rx_freq)[:3]}.{str(self.rx_freq)[3:-1]}"
-        # Offset
+        # Format offset
         chirp_offset = str(chirp_offset)[:-1]
         chirp_offset = f"{chirp_offset[:-5]}.{chirp_offset[-5:]}"
-        return f"{str(self.memory_index)},{self.memory_name.strip()},{chirp_rx_freq},{chirp_offset_dir},{chirp_offset},{chirp_tone},{chirp_analog_tx_tone},{chirp_analog_rx_tone},{chirp_digital_tx_tone},{chirp_tone_modes_dict.get(self.dig_polarity)},{self.ch_mode},{self.tuning_step},{self.skip},{self.comment},{self.your_call},{self.rpt1_call},{self.rpt2_call},"
+        # Format tuning step
+        chirp_tuning_step = str(self.tuning_step/1000)
+        return f"{str(self.memory_index)},{self.memory_name.strip()},{chirp_rx_freq},{chirp_offset_dir},{chirp_offset},{chirp_tone},{chirp_analog_tx_tone},{chirp_analog_rx_tone},{chirp_digital_tx_tone},{chirp_tone_modes_dict.get(self.dig_polarity)},{self.ch_mode},{chirp_tuning_step},{self.skip},{self.comment},{self.your_call},{self.rpt1_call},{self.rpt2_call},"
 
 # Convert from HEX to ASCII
 def hex_to_ascii(input_data: str, start_index: int, stop_index: int) -> str:
