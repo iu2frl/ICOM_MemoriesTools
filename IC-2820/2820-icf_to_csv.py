@@ -5,6 +5,8 @@ sys.path.append("../")
 import functions
 from functions import analog_tones_list
 from functions import MemoryBank
+from functions import RawData
+import binascii
 
 # Variables specific to this radio
 tuning_steps_list: list[str] = ["5000", "6250", "10000", "12500", "15000", "20000", "25000", "30000", "50000"]
@@ -93,44 +95,44 @@ def icf_to_csv(input_file_path: str, output_file_path: str, first_channel: int, 
         logging.debug("Reading lines from [%s] to [%s]", first_row, last_row)
         input_file_content = input_file_content[first_row:last_row]
         logging.debug("File length: [%s]", len(input_file_content))
+        
         # Loop per each memory bank and extract data
         for i in range(int(len(input_file_content)/3)):
             # Read real value from the file
-            tmp_bank = input_file_content[(i*3):(i*3)+3]
-            memory_bank: list[str] = []
-            # Clean the string
-            for single_line in tmp_bank:
-                memory_bank.append(single_line.strip())
+            banks_from_file: list[str] = input_file_content[(i*3):(i*3)+3]
+            memory_bank = RawData(banks_from_file)
+                
             # Extract frequency from the memory bank
-            rx_freq =int(memory_bank[0][6:14], 16)
+            rx_freq =int(memory_bank.hex_string[0][6:14], 16)
             if (rx_freq <= 5000):
                 #print("Memory bank [" + str(i) + "] is empty, skipping")
                 continue
+            
             # Memory band is valid
             logging.debug("Found memory bank [%s]", i)
             # Extract bank name
-            channel_name = str(bytes.fromhex(memory_bank[2][22:])).replace("b\'","").replace("\'","")
+            channel_name = str(bytes.fromhex(memory_bank.hex_string[2][22:])).replace("b\'","").replace("\'","")
             # Extract split
-            split = get_split(memory_bank)
+            split = get_split(memory_bank.hex_string)
             # Extract frequency offset
-            freq_offset = int(memory_bank[0][14:22], 16)
+            freq_offset = int(memory_bank.hex_string[0][14:22], 16)
             # Extract tuning step
-            tuning_step = int(tuning_steps_list[int(memory_bank[2][13:14])])
+            tuning_step = int(tuning_steps_list[int(memory_bank.hex_string[2][13:14])])
             # Extract mode
-            chan_mode = get_mode(memory_bank)
+            chan_mode = get_mode(memory_bank.hex_string)
             # Extract tone mode
-            chan_tone = get_tone(memory_bank)
+            chan_tone = get_tone(memory_bank.hex_string)
             if chan_tone is None:
                 chan_tone = -1
             # Extract TX analog RPT tone
             try:
-                rpt_tone = int(memory_bank[2][11:13], 16)
+                rpt_tone = int(memory_bank.hex_string[2][11:13], 16)
             except:
                 rpt_tone = -1
             # Extract RX analog RPT tone
-            rpt_tsql = get_tsql(memory_bank)
+            rpt_tsql = get_tsql(memory_bank.hex_string)
             # Extract YOUR callsign (for DV)
-            your_call = str(bytes.fromhex(memory_bank[0][22:34])).replace("b\'","").replace("\'","")
+            your_call = str(bytes.fromhex(memory_bank.hex_string[0][22:34])).replace("b\'","").replace("\'","")
             # Create generic split mode
             if split == "+":
                 tx_freq = rx_freq + freq_offset
@@ -158,14 +160,14 @@ def icf_to_csv(input_file_path: str, output_file_path: str, first_channel: int, 
                 tx_tone = 0
                 rx_tone = 0
             # Get DCS Tone
-            dig_tone = get_dtcs_tone(memory_bank)
-            dig_polarity = get_dtcs_polarity(memory_bank)
+            dig_tone = get_dtcs_tone(memory_bank.hex_string)
+            dig_polarity = get_dtcs_polarity(memory_bank.hex_string)
             # Create channel class
             new_channel = MemoryBank(i, channel_name, rx_freq, tx_freq, tuning_step, chan_mode, rpt_tone, rpt_tsql, dig_tone, dig_tone, my_call, your_call, tx_tone, rx_tone, dig_polarity)
             channels_list.append(new_channel)
             # Print for debug
-            logging.debug(memory_bank)
-            print(memory_bank)
+            logging.debug(memory_bank.hex_string)
+            print(memory_bank.hex_string)
     for single_bank in channels_list:
         # Print channel information
         print()
