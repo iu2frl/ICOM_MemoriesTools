@@ -17,7 +17,8 @@ tone_modes: dict = {"00": "None",
                     "1C": "DTCR-R",
                     "44": "Tone",
                     "24": "Tone",
-                    "2C": "TSQL"}
+                    "2C": "TSQL",
+                    "4C": "TSQL"}
 ch_modes: dict = {"00": "FM",
                   "04": "NFM",
                   "08": "AM",

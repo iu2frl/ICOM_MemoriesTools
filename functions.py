@@ -93,7 +93,7 @@ class MemoryBank:
         offset_dir = 0
         if freq_offset > 0:
             offset_dir = 1
-        if freq_offset < 0:
+        elif freq_offset < 0:
             offset_dir = -1
         else:
             offset_dir = 0
