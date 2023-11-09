@@ -2,7 +2,7 @@
 
 ICF files are HEX streams that contains information for each memory bank, structure is something similar to:
 
-```
+```txt
 1. Some number (not decoded yet, maybe radio ID or region?)
 2. Callsign
 3. First line of first memory channel
@@ -14,15 +14,18 @@ ICF files are HEX streams that contains information for each memory bank, struct
 
 So, excluding first two lines we can assume each memory is split into three lines, considering we have 500 memories, we know that memories starts from line 2 up to 1502 (500 memories * 3 lines)
 
+## Data structure
+
 ### Memories
 
 So, we know the memories are composed of three lines
 
 #### First line
 
-```
+```txt
 000 010 08A9AC9C 000927C0 435143514351 2020
 ```
+
 - Bytes 0 to 2 are the lines counter for the file, starting from `000` and stopping at ACB
 - Bytes 3 to 5 are always fixed at `010`
 - Bytes 6 to 14 are the frequency encoding as described below
@@ -32,17 +35,19 @@ So, we know the memories are composed of three lines
 
 #### Second line
 
-```
+```txt
 001 010 20202020202020202020202020202020
 ```
+
 - Bytes 0 to 2 are the lines counter for the file, starting from `000` and stopping at ACB
 - Bytes 3 to 5 are always fixed at `010`
 
-### Third line
+#### Third line
 
-```
+```txt
 002 010 72 0 02 08 3 00 0 90000 415249204D4E2D56
 ```
+
 - Bytes 0 to 2 are the lines counter for the file, starting from `000` and stopping at ACB
 - Bytes 3 to 5 are always fixed at `010`
 - Byte 8 is the split mode index (None, Pos or Neg)
@@ -52,13 +57,13 @@ So, we know the memories are composed of three lines
 - Bytes 16 is the mode (FM, AM, etc)
 - Bytes from 22 to the end are the channel name (8 characters)
 
-# Decoding data
+## Decoding data
 
-## Frequency encoding and decoding
+### Frequency encoding and decoding
 
 By checking the input ICF i tried saving multiple memories with different content, example each 1st line:
 
-```
+```txt
 000010 08A9AC9C 000927C04351435143512020 -> 145.337500
 000010 089A6A5C 000927C04351435143512020 -> 144.337500
 000010 088B281C 000927C04351435143512020 -> 143.337500
@@ -70,7 +75,7 @@ By checking the input ICF i tried saving multiple memories with different conten
 
 Then i started reverse engineering and i discovered a pattern
 
-### Encoding Process
+#### Encoding Process
 
 1. Take the decimal value you want to encode.
 2. Multiply the decimal value by 2^24 (16777216).
@@ -86,7 +91,8 @@ decimal_value = 145.337500
 encoded_hex = encode_decimal_to_hex(decimal_value)
 print(encoded_hex)
 ```
-### Decoding Process
+
+#### Decoding Process
 
 1. Take the hexadecimal value you want to decode.
 2. Convert the hexadecimal value to a decimal representation.
@@ -103,11 +109,12 @@ decoded_decimal = decode_hex_to_decimal(hex_value)
 print(decoded_decimal)
 
 ```
-## Frequency offset
+
+### Frequency offset
 
 I got this data from the ICF file at every 1st line:
 
-```
+```txt
 00001008A9AC9C 000186A0 4351435143512020 -> 0.100000
 00001008A9AC9C 00030D40 4351435143512020 -> 0.200000
 00001008A9AC9C 00186A00 4351435143512020 -> 1.600000
@@ -135,21 +142,21 @@ decoded_decimal = decode_hex_to_decimal(hex_value)
 print(f"Hexadecimal: {hex_value} -> Decimal: {decoded_decimal}")
 ```
 
-## Duplex mode
+### Duplex mode
 
 To get the duplex mode (positive or negative shift) i got from each 3rd line:
 
-```
+```txt
 00201072 0 0208300090000415249204D4E2D56 -> No shift
 00201072 2 0208300090000415249204D4E2D56 -> Negative
 00201072 4 0208300090000415249204D4E2D56 -> Positive
 ```
 
-## Tuning step
+### Tuning step
 
 For the tuning steps we have in each 3rd line:
 
-```
+```txt
 0020107200208 0 000000002020202020202020 -> 5k
 0050107200208 1 000000002020202020202020 -> 6.25k
 0080107200208 2 000000002020202020202020 -> 10k
@@ -162,6 +169,7 @@ For the tuning steps we have in each 3rd line:
 ```
 
 So we can extract the right step:
+
 ```python
 # List of tuning steps in Hz
 tuningStepsAry: list[str] = ["5000", "6250", "10000", "12500", "15000", "20000", "25000", "30000", "50000"]
@@ -170,7 +178,7 @@ tuningStep = tuningStepsAry[int(hex_value[2][13:14])]
 print(" Tuning step: [" + tuningStep + "]")
 ```
 
-## Mode
+### Mode
 
 For the different modes i found per each 3rd line:
 
@@ -181,7 +189,7 @@ For the different modes i found per each 3rd line:
 00B0107200208000 C 000002020202020202020 -> AM-N
 ```
 
-## Skip mode
+### Skip mode
 
 Skip can be set as Skip or PSkip, here is the output:
 
@@ -196,7 +204,7 @@ Skip can be set as Skip or PSkip, here is the output:
 
 I could not find any pattern here, any help is appreciated
 
-## Tone mode
+### Tone mode
 
 Having this input per each 3rd line:
 
@@ -211,11 +219,11 @@ Having this input per each 3rd line:
 
 ```
 
-## Repeater tones
+### Repeater tones
 
 Having this input per each 3rd line:
 
-```
+```txt
 00201072 0 4 20 00 000000002020202020202020 -> 67.0 (0)
 00501072 0 4 20 10 000000002020202020202020 -> 69.3 (1)
 00801072 0 4 20 20 000000002020202020202020 -> 71.9 (2)
@@ -244,11 +252,11 @@ Having this input per each 3rd line:
 01D01072 4 4 04 05 000000002020202020202020 -> DUP+ + Tone 67.0 + TSQL 69.3
 ```
 
-## DTCS Tone
+### DTCS Tone
 
 Having this input per each 3rd line:
 
-```
+```txt
 023 01072182085 02 0000002020202020202020 -> 025 - 1
 026 010721C2085 04 0000002020202020202020 -> 026 - 2
 029 01072182085 02 0000102020202020202020 -> 025 - 1
@@ -261,20 +269,20 @@ Having this input per each 3rd line:
 03E 01072182085 CC 0000002020202020202020 -> 743 - 102
 ```
 
-## Channel name
+### Channel name
 
 Channel name is encoded in the 3rd line of the channel:
 
-```
+```txt
 563010724420A600000000 525533312D56454E -> RU31-VEN
 ```
 
-## DV Data
+### DV Data
 
-### YOUR CALL
+#### YOUR CALL
 
 The destination callsign is easy to get and comes from the 1st line:
 
-```
+```txt
 00001008A9AC9C000927C0 435143514351 2020 -> CQCQCQ
 ```
