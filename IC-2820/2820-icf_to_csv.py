@@ -1,164 +1,125 @@
-import sys, getopt, os
-import ntpath
+# Import custom packages
+import sys
+sys.path.append("../")
+import functions
+from functions import analog_tones_list
+from functions import MemoryBank
 
-# List of tuning steps in Hz
-tuningStepsAry: list[str] = ["5000", "6250", "10000", "12500", "15000", "20000", "25000", "30000", "50000"]
-# List of repeater tones
-rptTonesAry = ["67.0", "69.3", "71.9", "74.4", "77.0", "79.7", "82.5", "85.4", "88.5", "91.5", "94.8", "97.4", "100.0", "103.5", "107.2", "110.9", "114.8", "118.8", "123.0", "127.3", "131.8", "136.5", "141.3", "146.2", "151.4", "156.7", "159.8", "162.2", "165.5", "167.9", "171.3", "173.8", "177.9", "179.9", "183,5", "186.2", "189.9", "192.8", "196.6", "199.5", "203.5", "206.5", "210.7", "218.1", "225.7", "229.1", "233.6", "241.8", "250.3", "254.1"]
-
-# Get arguments from terminal
-def GetArgs() -> list[str, str, int, int]:
-    firstCh = ""
-    lastCh = ""
-    opts, arg = getopt.getopt(sys.argv[1:],"hi:o:f:l:",["ifile=", "ofile=", "first=", "last="])
-    for opt, arg in opts:
-        if opt == '-h':
-            print(os.path.basename(__file__) + ' -i <inputfile> -o <outputfile>')
-            print("Optional: -f <firstCh> -l <lastCh>")
-            sys.exit()
-        elif opt in ("-i", "--ifile"):
-            inputfile = arg
-        elif opt in ("-o", "--ofile"):
-            outputfile = arg
-        elif opt in ("-f", "--first"):
-            firstCh = arg
-        elif opt in ("-l", "--last"):
-            lastCh = arg
-    if (inputfile.endswith(".icf")):
-        print ('Input file is ', inputfile)
-    else:
-        print("No ICF file was given as input!")
-        return
-    if (inputfile.endswith(".csv")):
-        print ('Output file is ', outputfile)
-    else:
-        outputfile = ntpath.basename(inputfile.replace(".icf", ".csv"))
-        print("No output file was given, defaulting to " + outputfile)
-    if firstCh == "":
-        firstCh = 0
-    else:
-        firstCh = int(firstCh)
-    if lastCh == "":
-        lastCh = 499
-    else:
-        lastCh = int(lastCh)
-        if lastCh > 499:
-            lastCh = 499
-    return inputfile, outputfile, firstCh, lastCh
+# Variables specific to this radio
+tuning_steps_list: list[str] = ["5000", "6250", "10000", "12500", "15000", "20000", "25000", "30000", "50000"]
+tone_modes: dict = {"00": "None", "04": "Tone", "0C": "TSQL", "10": "TSQL-R", "18": "DTCS", "1C": "DTCR-R"}
+# List of decoded channels
+channels_list: list[MemoryBank] = []
 
 # Get shift from the current bank
-def GetSplit(inputBank: list[str]) -> str:
+def get_split(input_bank: list[str]) -> str:
+    """Extracts the Split info from the memory bank(s)"""
     # Extract split
-    tmpSplit = str(inputBank[2][8:9])
-    if tmpSplit == "0":
+    tmp_split = str(input_bank[2][8:9])
+    if tmp_split == "0":
         return "0"
-    elif tmpSplit == "2":
+    elif tmp_split == "2":
         return "-"
-    elif tmpSplit == "4":
+    elif tmp_split == "4":
         return "+"
     else:
-        return "ERR-" + tmpSplit
+        return "ERR-" + tmp_split
 
 # Get mode from the current bank
-def GetMode(inputBank: list[str]) -> str:
-    tmpMode = inputBank[2][16:17]
-    if tmpMode == "0":
+def get_mode(input_bank: list[str]) -> str:
+    """Extracts the TX Mode from the memory bank(s)"""
+    tmp_mode = input_bank[2][16:17]
+    if tmp_mode == "0":
         return "FM"
-    elif tmpMode == "4":
+    elif tmp_mode == "4":
         return "FM-N"
-    elif tmpMode == "8":
+    elif tmp_mode == "8":
         return "AM"
-    elif tmpMode == "C":
+    elif tmp_mode == "C":
         return "AM-N" 
     else:
-        return "Unknown-" + tmpMode
+        return "Unknown-" + tmp_mode
 
 # Get tone from the current bank
-def GetTone(inputBank: list[str]) -> str:
-    tmpTone = inputBank[2][8:10]
-    if tmpTone == "00":
-        return "None"
-    elif tmpTone == "04":
-        return "Tone"
-    elif tmpTone == "0C":
-        return "TSQL"
-    elif tmpTone == "10":
-        return "TSQL-R"
-    elif tmpTone == "18":
-        return "DTCS"
-    elif tmpTone == "1C":
-        return "DTCR-R"
-    else:
-        return "Unknown-" + tmpTone
+def get_tone(input_bank: list[str]) -> str:
+    """Extracts the Tone Mode from the memory bank(s)"""
+    return tone_modes.get(input_bank[2][8:10])
 
 # Get the Tone Squelch
-def GetTsql(inputBank: list[str]) -> str:
-    hex_string = inputBank[2][10:12]
+def get_tsql(input_bank: list[str]) -> str:
+    """Extracts the TSQL information from the memory bank(s)"""
+    hex_string = input_bank[2][10:12]
     hex_value = int(hex_string, 16)  # Convert hexadecimal string to integer
     lower_byte = hex_value & 0xFF  # Extract the lower byte (last two characters)
     number = lower_byte // 4  # Divide the lower byte by 4
-    return rptTonesAry[number]
+    return analog_tones_list[number]
 
 def main():
-    inputFilePath, outputFilePath, firstCh, lastCh = GetArgs()
-    with open(inputFilePath, "r") as inputStream:
+    """Main program process"""
+    cli_srguments = functions.get_cli_args(sys.argv[1:])
+    if cli_srguments is None:
+        return
+    input_file_path, output_file_path, first_channel, last_channel = cli_srguments
+    with open(input_file_path, "r") as input_stream:
         # Read file content
-        inputFileContent = inputStream.readlines()
-        print("Found memory file by [" + inputFileContent[1].rstrip().replace("#", "") + "]")
-        print("Reading channels from [" + str(firstCh) + "] to [" + str(lastCh) + "]")
-        firstRow = (firstCh * 3) + 2
-        lastRow = (lastCh * 3) + 2
-        print("Reading lines from [" + str(firstRow) + "] to [" + str(lastRow) + "]")
-        inputFileContent = inputFileContent[firstRow:lastRow]
-        print(len(inputFileContent))
+        input_file_content = input_stream.readlines()
+        print("Found memory file by [" + input_file_content[1].rstrip().replace("#", "") + "]")
+        print("Reading channels from [" + str(first_channel) + "] to [" + str(last_channel) + "]")
+        first_row = (first_channel * 3) + 2
+        last_row = (last_channel * 3) + 2
+        print("Reading lines from [" + str(first_row) + "] to [" + str(last_row) + "]")
+        input_file_content = input_file_content[first_row:last_row]
+        print(len(input_file_content))
         # Loop per each memory bank and extract data
-        for i in range(int(len(inputFileContent)/3)):
+        for i in range(int(len(input_file_content)/3)):
             # Read real value from the file
-            tmpBank = inputFileContent[(i*3):(i*3)+3]
-            memoryBank: list[str] = []
+            tmp_bank = input_file_content[(i*3):(i*3)+3]
+            memory_bank: list[str] = []
             # Clean the string
-            for singleLine in tmpBank:
-                memoryBank.append(singleLine.strip())
+            for single_line in tmp_bank:
+                memory_bank.append(single_line.strip())
             # Extract frequency from the memory bank
-            freqMhz = str(int(memoryBank[0][6:14], 16))
-            if (int(freqMhz) <= 5000):
+            freq_MHz = str(int(memory_bank[0][6:14], 16))
+            if (int(freq_MHz) <= 5000):
                 #print("Memory bank [" + str(i) + "] is empty, skipping")
                 continue
             # Memory band is valid
             print("Found memory bank [" + str(i) + "]")
             # Extract bank name
-            channelName = str(bytes.fromhex(memoryBank[2][22:])).replace("b\'","").replace("\'","")
+            channel_name = str(bytes.fromhex(memory_bank[2][22:])).replace("b\'","").replace("\'","")
             # Extract split
-            split = GetSplit(memoryBank)
+            split = get_split(memory_bank)
             # Extract frequency offset
-            freqOffset = str(int(memoryBank[0][14:22], 16))
+            freq_offset = str(int(memory_bank[0][14:22], 16))
             # Extract tuning step
-            tuningStep = tuningStepsAry[int(memoryBank[2][13:14])]
+            tuning_step = tuning_steps_list[int(memory_bank[2][13:14])]
             # Extract mode
-            chanMode = GetMode(memoryBank)
+            chan_mode = get_mode(memory_bank)
             # Extract tone mode
-            chanTone = GetTone(memoryBank)
+            chan_tone = get_tone(memory_bank)
+            if chan_tone is None:
+                chan_tone = "Unknown"
             # Extract TX analog RPT tone
             try:
-                rptTone = rptTonesAry[int(memoryBank[2][11:13], 16)]
+                rpt_tone = analog_tones_list[int(memory_bank[2][11:13], 16)]
             except:
-                rptTone = "None"
+                rpt_tone = "None"
             # Extract RX analog RPT tone
-            rptTsql = GetTsql(memoryBank)
+            rpt_tsql = get_tsql(memory_bank)
             # Extract YOUR callsign (for DV)
-            yourCall = str(bytes.fromhex(memoryBank[0][22:34])).replace("b\'","").replace("\'","")
+            your_call = str(bytes.fromhex(memory_bank[0][22:34])).replace("b\'","").replace("\'","")
             # Print channel information
-            print(memoryBank)
-            print(" Channel name: [" + channelName + "]")
-            print(" Frequency: [" + freqMhz + "] Hz")
+            print(memory_bank)
+            print(" Channel name: [" + channel_name + "]")
+            print(" Frequency: [" + freq_MHz + "] Hz")
             print(" Split: [" + split + "]")
-            print(" Offset: [" + freqOffset + "] Hz")
-            print(" Tuning step: [" + tuningStep + "]")
-            print(" Mode: [" + chanMode + "]")
-            print(" Tone mode: [" + chanTone + "]")
-            print(" Analog RPT tone: [" + rptTone + "]")
-            print(" Analog TSQL: [" + rptTsql + "]")
-            print(" Your CALL: [" + yourCall + "]")
+            print(" Offset: [" + freq_offset + "] Hz")
+            print(" Tuning step: [" + tuning_step + "]")
+            print(" Mode: [" + chan_mode + "]")
+            print(" Tone mode: [" + chan_tone + "]")
+            print(" Analog RPT tone: [" + rpt_tone + "]")
+            print(" Analog TSQL: [" + rpt_tsql + "]")
+            print(" Your CALL: [" + your_call + "]")
             
 if __name__ == "__main__":
-   main()
+    main()

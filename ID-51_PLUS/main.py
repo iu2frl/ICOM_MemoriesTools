@@ -114,7 +114,7 @@ def main():
         bankCnt = 0
         for singleMemory in memoriesList[firstCh:lastCh]:
             print(f"Channel: [{bankCnt}]")
-            print(f" Name: [{functions.HexToAscii(singleMemory, 22, 54)}]")
+            print(f" Name: [{functions.hex_to_ascii(singleMemory, 22, 54)}]")
             #print(" Your call: [" + functions.HexToAscii(singleMemory, ))
             #print(str(int(singleMemory[2:10], 16)))
             print(f" Frequency: [{str(int(singleMemory[0:8], 16))}]")
