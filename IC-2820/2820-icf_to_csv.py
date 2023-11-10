@@ -18,11 +18,11 @@ tone_modes: dict = {"0000": "None",
                     "1000": "TSQL-R",
                     "1100": "DTCS",
                     "1110": "DTCR-R"}
-ch_modes: dict = {"00": "FM",
-                  "04": "NFM",
-                  "08": "AM",
-                  "0C": "NAM",
-                  "10": "DV"}
+ch_modes: dict = {"000": "FM",
+                  "001": "NFM",
+                  "010": "AM",
+                  "011": "NAM",
+                  "100": "DV"}
 # List of decoded channels
 channels_list: list[MemoryBank] = []
 
@@ -45,7 +45,7 @@ def get_mode(input_bank: list[str]) -> str:
     """Extracts the TX Mode from the memory bank(s)"""
     # if re.compile('[^01]').search(input_bank[2]):
     #     raise(Exception("Get_mode function expects binary data!"))
-    tmp_mode = input_bank[2][15:17]
+    tmp_mode = functions.hex_str_to_bin_str(input_bank[2][15:17])[3:6]
     #print(tmp_mode)
     channel_mode = ch_modes.get(tmp_mode)
     if channel_mode is None:
@@ -170,8 +170,6 @@ def icf_to_csv(input_file_path: str, output_file_path: str, first_channel: int, 
             
             # Print for debug
             logging.debug(memory_bank.hex_string)
-            # Print the useful part of third bank
-            print(memory_bank.bin_string[2])
             
     for single_bank in channels_list:
         # Print channel information

@@ -61,6 +61,8 @@ So, we know the memories are composed of three lines
 - Digit 15 to 16 is the `channel mode` (FM, AM, etc)
 - Digit 17 to  to the end are the `channel name` ASCI characters (8 characters)
 
+Please note that Digit 15 is actually split into two sets of 4 bits, left ones are part of the `DTCS Tone`, right part is part of the `Channel Mode`
+
 ## Decoding data
 
 ### Frequency encoding and decoding
