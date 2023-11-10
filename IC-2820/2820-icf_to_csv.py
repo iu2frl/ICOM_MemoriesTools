@@ -6,8 +6,6 @@ import functions
 from functions import analog_tones_list
 from functions import MemoryBank
 from functions import RawData
-import binascii
-import re
 
 # Variables specific to this radio
 tuning_steps_list: list[str] = ["5000", "6250", "10000", "12500", "15000", "20000", "25000", "30000", "50000"]
