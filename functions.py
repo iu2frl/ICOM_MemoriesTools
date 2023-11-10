@@ -30,9 +30,7 @@ class RawData:
             # Store HEX string
             self.hex_string.append(single_hex.strip())
             # Convert to binary string
-            bytes_data = bytes.fromhex(single_hex.strip())
-            binary_data = bin(int(binascii.hexlify(bytes_data), 16))[2:]
-            self.bin_string.append(binary_data.zfill((len(binary_data) + 7) // 8 * 8))
+            self.bin_string.append(hex_str_to_bin_str(single_hex))
 
 # Memory bank definition
 class MemoryBank:
@@ -255,10 +253,21 @@ def chirp_header() -> str:
 # Write CSV file
 def write_chirp_csv(output_path: str, memories_list: list[MemoryBank]) -> bool:
     """Export CSV file according to CHIRP specifications"""
-    with open(output_path, "w", encoding="UTF-8") as output_content:
-        output_content.write(f"{chirp_header()}\n")
-        for single_memory in memories_list:
-            output_content.write(f"{single_memory.get_chirp_csv_line()}\n")
+    try:
+        with open(output_path, "w", encoding="UTF-8") as output_content:
+            output_content.write(f"{chirp_header()}\n")
+            for single_memory in memories_list:
+                output_content.write(f"{single_memory.get_chirp_csv_line()}\n")
+        return True
+    except:
+        return False
+
+# Convert HEX string to BIN string
+def hex_str_to_bin_str(input_hex_str: str) -> str:
+    """Converts a HEX string to the equivalent BIN string"""
+    bytes_data = bytes.fromhex(input_hex_str.strip())
+    binary_data = bin(int(binascii.hexlify(bytes_data), 16))[2:]
+    return binary_data.zfill((len(binary_data) + 7) // 8 * 8)
 
 # Sample CHIRP file
 # Location,Name,Frequency,Duplex,Offset,Tone,rToneFreq,cToneFreq,DtcsCode,DtcsPolarity,Mode,TStep,Skip,Comment,URCALL,RPT1CALL,RPT2CALL

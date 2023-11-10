@@ -7,20 +7,17 @@ from functions import analog_tones_list
 from functions import MemoryBank
 from functions import RawData
 import binascii
+import re
 
 # Variables specific to this radio
 tuning_steps_list: list[str] = ["5000", "6250", "10000", "12500", "15000", "20000", "25000", "30000", "50000"]
 # These dictionaries must map to the ones in functions.py
-tone_modes: dict = {"00": "None",
-                    "04": "Tone",
-                    "0C": "TSQL",
-                    "10": "TSQL-R",
-                    "18": "DTCS",
-                    "1C": "DTCR-R",
-                    "44": "Tone",
-                    "24": "Tone",
-                    "2C": "TSQL",
-                    "4C": "TSQL"}
+tone_modes: dict = {"0000": "None",
+                    "0010": "Tone",
+                    "0110": "TSQL",
+                    "1000": "TSQL-R",
+                    "1100": "DTCS",
+                    "1110": "DTCR-R"}
 ch_modes: dict = {"00": "FM",
                   "04": "NFM",
                   "08": "AM",
@@ -46,18 +43,22 @@ def get_split(input_bank: list[str]) -> str:
 # Get mode from the current bank
 def get_mode(input_bank: list[str]) -> str:
     """Extracts the TX Mode from the memory bank(s)"""
+    # if re.compile('[^01]').search(input_bank[2]):
+    #     raise(Exception("Get_mode function expects binary data!"))
     tmp_mode = input_bank[2][15:17]
+    #print(tmp_mode)
     channel_mode = ch_modes.get(tmp_mode)
     if channel_mode is None:
-        logging.error(f"Cannot detect mode: [{tmp_mode}]")
+        logging.error("Cannot detect mode: [%s]", tmp_mode)
         return "FM"
     else:
         return channel_mode
 
 # Get tone from the current bank
-def get_tone(input_bank: list[str]) -> str:
+def get_tone_mode(input_bank: list[str]) -> str:
     """Extracts the Tone Mode from the memory bank(s)"""
-    return tone_modes.get(input_bank[2][8:10])
+    tmp_tone_mode = functions.hex_str_to_bin_str(input_bank[2][8:10])[2:-2]
+    return tone_modes.get(tmp_tone_mode)
 
 # Get the Tone Squelch
 def get_tsql(input_bank: list[str]) -> int:
@@ -92,7 +93,7 @@ def icf_to_csv(input_file_path: str, output_file_path: str, first_channel: int, 
         logging.info("Found memory file by [%s]", my_call)
         logging.info("Reading channels from [%s] to [%s]", first_channel, last_channel)
         first_row = (first_channel * 3) + 2
-        last_row = (last_channel * 3) + 2
+        last_row = ((last_channel + 1) * 3) + 2
         logging.debug("Reading lines from [%s] to [%s]", first_row, last_row)
         input_file_content = input_file_content[first_row:last_row]
         logging.debug("File length: [%s]", len(input_file_content))
@@ -122,7 +123,7 @@ def icf_to_csv(input_file_path: str, output_file_path: str, first_channel: int, 
             # Extract mode
             chan_mode = get_mode(memory_bank.hex_string)
             # Extract tone mode
-            chan_tone = get_tone(memory_bank.hex_string)
+            chan_tone = get_tone_mode(memory_bank.hex_string)
             if chan_tone is None:
                 chan_tone = -1
             # Extract TX analog RPT tone
@@ -170,7 +171,7 @@ def icf_to_csv(input_file_path: str, output_file_path: str, first_channel: int, 
             # Print for debug
             logging.debug(memory_bank.hex_string)
             # Print the useful part of third bank
-            print(memory_bank.bin_string[2][16:-32])
+            print(memory_bank.bin_string[2])
             
     for single_bank in channels_list:
         # Print channel information
